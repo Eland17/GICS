@@ -347,10 +347,10 @@
         #print-sheet-container { display: none; }
         .no-print { display: block; }
 
-        /* SKALA SKALA DESKTOP 20% LEBIH BESAR */
+        /* SKALA DESKTOP 20% LEBIH BESAR */
         @media (min-width: 1024px) {
             body {
-                zoom: 1.2; /* Memperbesar tampilan dekstop 20% */
+                zoom: 1.2;
             }
         }
 
@@ -358,7 +358,7 @@
         @media(max-width: 768px) {
             body { 
                 padding: 2px; 
-                zoom: 1.0; /* Skala normal untuk HP */
+                zoom: 1.0;
             }
             .dash-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
             .dash-layout { grid-template-columns: 1fr; }
@@ -466,11 +466,9 @@
                     <div class="dash-panel">
                         <div class="dash-panel-title">Persentase Jumlah Material per Buyer</div>
                         <div id="dashboard-buyer-chart"><div style="color:#666">Belum ada data material.</div></div>
-                        <div style="color:#666; margin-top:8px;">Persentase dihitung berdasarkan jumlah kode material pada Master Material per Buyer.</div>
                     </div>
                     <div class="dash-panel">
                         <div class="dash-panel-title">Status Stok — Reorder Alert</div>
-                        <div style="margin-bottom:8px;">Material dengan stok saat ini kurang dari atau sama dengan Reorder Level.</div>
                         <div class="dash-table-wrap">
                             <table class="sap-grid">
                                 <thead><tr><th>Kode Material</th><th>Deskripsi</th><th>Buyer</th><th style="text-align:right;">Stok</th><th style="text-align:right;">Reorder Level</th><th>Status</th></tr></thead>
@@ -554,7 +552,6 @@
                         <tbody id="po-list-body"></tbody>
                     </table>
                 </div>
-                <div style="margin-top:6px;color:#444;">Penerimaan melalui tombol <b>Terima</b> akan mengisi MIGO-GR dengan nomor PO sebagai referensi. Stok bertambah setelah dokumen penerimaan diposting.</div>
             </div>
         </div>
 
@@ -644,7 +641,7 @@
             </div>
 
             <div class="sap-panel">
-                <div class="sap-panel-title">Line Items - Multi Item & Multi SLoc (Bisa Input Banyak Rak per Material)</div>
+                <div class="sap-panel-title">Line Items - Multi Item & Multi SLoc</div>
                 <div style="margin-bottom: 4px; display: flex; gap: 4px; flex-wrap:wrap;">
                     <button class="sap-btn" onclick="addMigoRow('gr')">➕ Add Item Line</button>
                     <button class="sap-btn" onclick="openScannerModal('gr-line')">📷 Scan Barcode Material</button>
@@ -671,7 +668,7 @@
             </div>
         </div>
 
-        <!-- MODUL 2: BARANG KELUAR MULTI-ITEM (MIGO-GI 201) — OTOMATIS SLoc DARI STOK MATERIAL -->
+        <!-- MODUL 2: BARANG KELUAR MULTI-ITEM (MIGO-GI 201) -->
         <div id="view-migo-gi" style="display: none;">
             <div class="sap-panel">
                 <div class="sap-panel-title">Header - Goods Issue (MIGO Movement Type 201)</div>
@@ -723,14 +720,14 @@
             </div>
         </div>
 
-        <!-- MODUL 3: STOK BARANG (MMBE / MB52) — TERURUT BERDASARKAN KODE MATERIAL -->
+        <!-- MODUL 3: STOK BARANG (MMBE / MB52) — MULTI-ITEM SCAN PER RAK -->
         <div id="view-mmbe" style="display: none;">
             <div class="sap-panel">
                 <div class="sap-panel-title">Stock Overview & Balance (MMBE / MB52) — Terurut Berdasarkan Kode Material</div>
                 <div class="sap-form-grid" style="margin-bottom: 6px;">
                     <div class="sap-field">
                         <label>Filter Search</label>
-                        <input type="text" id="stock-search" oninput="renderStockTable()" placeholder="Cari Kode, Nama, Buyer, Rak...">
+                        <input type="text" id="stock-search" oninput="renderStockTable()" placeholder="Cari Kode, Nama, Buyer, Rak (Contoh: RAK-A3)...">
                     </div>
                     <div class="sap-field">
                         <label>Buyer Filter</label>
@@ -751,8 +748,8 @@
                                 <th>Kode Buyer</th>
                                 <th>Deskripsi Material</th>
                                 <th>UoM</th>
-                                <th style="text-align: right;">Stok</th>
-                                <th>Sloc Info</th>
+                                <th style="text-align: right;">Stok Total</th>
+                                <th>Sloc Info (Rak & Qty)</th>
                                 <th style="text-align: right;">Reorder Level</th>
                                 <th>Status Stok</th>
                                 <th>Kartu Stok</th>
@@ -1518,8 +1515,9 @@
         return map;
     }
 
+    /* PEMBERBATASAN PENCAIARAN MULTI-ITEM PER RAK (MMBE) */
     function renderStockTable() {
-        const search = document.getElementById('stock-search').value.toLowerCase();
+        const search = document.getElementById('stock-search').value.trim().toLowerCase();
         const buyerFilter = document.getElementById('stock-buyer-filter').value.toLowerCase();
         const tbody = document.getElementById('grid-stock-body');
         tbody.innerHTML = '';
@@ -1530,17 +1528,36 @@
 
         sortedMaterials.forEach(mat => {
             if (buyerFilter && !mat.buyer.toLowerCase().includes(buyerFilter)) return;
-            let rakDetails = [], searchableSlocStr = '';
+            
+            let rakDetails = [];
+            let slocsList = [];
             
             Object.keys(stockBySLoc).forEach(key => {
                 const [mCode, slocName] = key.split('__');
                 if (mCode === mat.code && stockBySLoc[key] !== 0) {
                     rakDetails.push(`<b>${slocName}</b>: ${stockBySLoc[key]} ${mat.uom}`);
-                    searchableSlocStr += ` ${slocName}`;
+                    slocsList.push(slocName.toLowerCase());
                 }
             });
 
-            if (search && !mat.code.toLowerCase().includes(search) && !mat.desc.toLowerCase().includes(search) && !mat.buyer.toLowerCase().includes(search) && !searchableSlocStr.toLowerCase().includes(search)) return;
+            // LOGIKA PENCARIAN BARU: Jika pencarian berupa kode rak (misal RAK-A3), 
+            // tampilkan SEMUA material yang berada di rak tersebut!
+            let isMatched = false;
+
+            if (!search) {
+                isMatched = true;
+            } else {
+                const isCodeMatch = mat.code.toLowerCase().includes(search);
+                const isDescMatch = mat.desc.toLowerCase().includes(search);
+                const isBuyerMatch = mat.buyer.toLowerCase().includes(search);
+                const isSlocMatch = slocsList.some(s => s.includes(search));
+
+                if (isCodeMatch || isDescMatch || isBuyerMatch || isSlocMatch) {
+                    isMatched = true;
+                }
+            }
+
+            if (!isMatched) return;
 
             const totalStock = totalStockMap[mat.code] || 0;
             const isLow = totalStock <= (mat.reorder || 0);
@@ -1561,6 +1578,11 @@
             `;
             tbody.appendChild(tr);
         });
+
+        if (tbody.children.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:12px; color:#888;">Tidak ada material/stok yang ditemukan untuk lokasi rak atau keyword [${search}].</td></tr>`;
+        }
+
         if (document.getElementById('dashboard-buyer-chart')) renderDashboard();
     }
 
