@@ -442,6 +442,7 @@
         <button class="sap-btn" onclick="switchTab('migo-gi')">MIGO-GI</button>
         <button class="sap-btn" onclick="switchTab('mmbe')">MMBE (Stok)</button>
         <button class="sap-btn" onclick="switchTab('stok-opname')">MI01/MI07 (Opname)</button>
+        <button class="sap-btn" onclick="switchTab('report-opname')">Report Opname</button>
         <button class="sap-btn" onclick="switchTab('rekap-style')">ZSTYLE</button>
         <button class="sap-btn" onclick="switchTab('mb51')">MB51 (Mutasi)</button>
         <button class="sap-btn" onclick="switchTab('fsn')">FSN</button>
@@ -457,6 +458,7 @@
         <div class="sap-tab" id="tab-migo-gi" onclick="switchTab('migo-gi')">Barang Keluar (MIGO-GI)</div>
         <div class="sap-tab" id="tab-mmbe" onclick="switchTab('mmbe')">Stok Barang (MMBE)</div>
         <div class="sap-tab" id="tab-stok-opname" onclick="switchTab('stok-opname')">Stok Opname (MI01/MI07)</div>
+        <div class="sap-tab" id="tab-report-opname" onclick="switchTab('report-opname')">Report Hasil Opname</div>
         <div class="sap-tab" id="tab-rekap-style" onclick="switchTab('rekap-style')">Rekap Style (ZSTYLE)</div>
         <div class="sap-tab" id="tab-mb51" onclick="switchTab('mb51')">Mutasi Barang (MB51)</div>
         <div class="sap-tab" id="tab-fsn" onclick="switchTab('fsn')">Analisis FSN</div>
@@ -828,6 +830,34 @@
             </div>
         </div>
 
+        <div id="view-report-opname" style="display:none;">
+            <div class="sap-panel">
+                <div class="sap-panel-title">Report Hasil Stok Opname</div>
+                <div class="sap-form-grid" style="margin-bottom:8px;">
+                    <div class="sap-field"><label>Tanggal Dari</label><input type="date" id="report-opname-start" onchange="renderOpnameReport()"></div>
+                    <div class="sap-field"><label>Tanggal Sampai</label><input type="date" id="report-opname-end" onchange="renderOpnameReport()"></div>
+                    <div class="sap-field"><label>Kode Rak</label><input type="text" id="report-opname-sloc" oninput="renderOpnameReport()" placeholder="Semua rak"></div>
+                    <div class="sap-field"><label>Pencarian</label><input type="text" id="report-opname-search" oninput="renderOpnameReport()" placeholder="Kode / deskripsi / buyer / petugas"></div>
+                </div>
+                <div class="dash-grid">
+                    <div class="dash-card"><div class="dash-label">Total Item Diperiksa</div><div class="dash-value" id="op-r-total">0</div></div>
+                    <div class="dash-card"><div class="dash-label">Sesuai</div><div class="dash-value" id="op-r-match">0</div></div>
+                    <div class="dash-card"><div class="dash-label">Selisih Lebih</div><div class="dash-value" id="op-r-plus">0</div></div>
+                    <div class="dash-card"><div class="dash-label">Selisih Kurang</div><div class="dash-value" id="op-r-minus">0</div></div>
+                </div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
+                    <button class="sap-btn" onclick="renderOpnameReport()">Refresh</button>
+                    <button class="sap-btn" onclick="exportCSV('opname')">Export CSV / Excel</button>
+                    <button class="sap-btn" onclick="printOpnameReport()">Cetak Laporan</button>
+                </div>
+                <div class="sap-grid-container"><table class="sap-grid">
+                    <thead><tr><th>Tanggal</th><th>No. Dokumen</th><th>Kode Rak</th><th>Kode Material</th><th>Deskripsi</th><th>Buyer</th><th>Satuan</th><th>Stok Sistem</th><th>Hasil Fisik</th><th>Selisih</th><th>Status</th><th>Petugas</th></tr></thead>
+                    <tbody id="report-opname-body"><tr><td colspan="12" style="text-align:center;">Belum ada riwayat opname.</td></tr></tbody>
+                </table></div>
+                <p style="margin-top:6px;color:#555;">Riwayat tersimpan di browser/perangkat ini. Export CSV untuk arsip cadangan.</p>
+            </div>
+        </div>
+
         <!-- MODUL 4: REKAP MATERIAL BERDASARKAN STYLE (ZSTYLE) -->
         <div id="view-rekap-style" style="display: none;">
             <div class="sap-panel">
@@ -1135,6 +1165,7 @@
     let currentLedgerCode = null;
     let purchaseOrders = JSON.parse(localStorage.getItem('sap_purchase_orders') || '[]');
     let poEditingId = null;
+    let opnameHistory = JSON.parse(localStorage.getItem('sap_opname_history') || '[]');
 
     let html5QrcodeScanner = null;
     let activeScannerTarget = null;
@@ -1201,7 +1232,7 @@
         const activeTab = document.getElementById(`tab-${tabId}`);
         if(activeTab) activeTab.classList.add('active');
 
-        const views = ['dashboard', 'po', 'mm60', 'migo-gr', 'migo-gi', 'mmbe', 'stok-opname', 'rekap-style', 'mb51', 'fsn', 'print-barcode'];
+        const views = ['dashboard', 'po', 'mm60', 'migo-gr', 'migo-gi', 'mmbe', 'stok-opname', 'report-opname', 'rekap-style', 'mb51', 'fsn', 'print-barcode'];
         views.forEach(v => {
             const el = document.getElementById(`view-${v}`);
             if (el) el.style.display = (v === tabId) ? 'block' : 'none';
@@ -1211,6 +1242,7 @@
         if (tabId === 'po') renderPOTable();
         if (tabId === 'mm60') renderMasterTable();
         if (tabId === 'mmbe') renderStockTable();
+        if (tabId === 'report-opname') renderOpnameReport();
         if (tabId === 'rekap-style') renderRekapStyleTable();
         if (tabId === 'mb51') renderMutasiTable();
         if (tabId === 'fsn') renderFSNTable();
@@ -1230,6 +1262,7 @@
         else if (input === 'MIGO-GI' || input === 'MIGO201') switchTab('migo-gi');
         else if (input === 'MMBE' || input === 'MB52') switchTab('mmbe');
         else if (input === 'MI01' || input === 'MI07' || input === 'OPNAME') switchTab('stok-opname');
+        else if (input === 'ZOPR' || input === 'OPREPORT') switchTab('report-opname');
         else if (input === 'ZSTYLE' || input === 'STYLE') switchTab('rekap-style');
         else if (input === 'MB51') switchTab('mb51');
         else if (input === 'FSN') switchTab('fsn');
@@ -1430,52 +1463,67 @@
 
     function postOpnameAdjustment() {
         const sloc = document.getElementById('opname-sloc').value.trim().toUpperCase();
-        const date = document.getElementById('opname-date').value;
+        const date = document.getElementById('opname-date').value || new Date().toISOString().slice(0,10);
         const user = document.getElementById('opname-user').value.trim() || 'Opname Team';
         const rows = document.querySelectorAll('#grid-opname-body tr[data-code]');
-
         if (!sloc) { alert('Harap isi kode lokasi rak!'); return; }
-        if (rows.length === 0) { alert('Tidak ada data material untuk diposting!'); return; }
-
-        let postedDocCount = 0;
-        const nextDocNum = 7000000000 + mutasiLog.length + 1;
-
+        if (!rows.length) { alert('Tidak ada data material untuk diposting!'); return; }
+        if (!confirm('Simpan hasil opname ke riwayat laporan dan posting penyesuaian jika ada selisih?')) return;
+        const nextDocNum = (7000000000 + mutasiLog.length + 1).toString();
+        let adjustmentCount = 0;
         rows.forEach(tr => {
-            const code = tr.getAttribute('data-code');
-            const uom = tr.getAttribute('data-uom');
+            const code = tr.getAttribute('data-code'), uom = tr.getAttribute('data-uom');
             const bookQty = parseFloat(tr.getAttribute('data-book')) || 0;
-            const countedQty = parseFloat(tr.querySelector('.opname-counted-input').value) || 0;
+            const countedQty = parseFloat(tr.querySelector('.opname-counted-input').value);
+            if (!Number.isFinite(countedQty) || countedQty < 0) return;
             const variance = countedQty - bookQty;
-
-            const matObj = materials.find(m => m.code === code) || {};
-
+            const mat = materials.find(m => m.code === code) || {};
+            opnameHistory.unshift({id:`${Date.now()}-${code}-${sloc}`,date,docNum:nextDocNum,sloc,code,
+                desc:mat.desc||'Material Opname',buyer:mat.buyer||'-',uom,bookQty,countedQty,variance,
+                status:variance===0?'Sesuai':variance>0?'Selisih Lebih':'Selisih Kurang',user});
             if (variance !== 0) {
-                const mvtType = variance > 0 ? '701' : '702'; // 701: Gain/Surplus (+), 702: Loss/Deficit (-)
-                const absQty = Math.abs(variance);
-
-                mutasiLog.unshift({
-                    docNum: nextDocNum.toString(),
-                    date,
-                    mvt: mvtType,
-                    code: code,
-                    desc: matObj.desc || 'Material Opname',
-                    style: '-',
-                    sloc: sloc,
-                    partner: user,
-                    ref: `PHYS-OPNAME-${sloc}`,
-                    qty: absQty,
-                    uom: uom,
-                    text: `Opname Adjustment: Book=${bookQty}, Count=${countedQty}`
-                });
-
-                postedDocCount++;
+                mutasiLog.unshift({docNum:nextDocNum,date,mvt:variance>0?'701':'702',code,desc:mat.desc||'Material Opname',
+                    style:'-',sloc,partner:user,ref:`PHYS-OPNAME-${sloc}`,qty:Math.abs(variance),uom,
+                    text:`Opname Adjustment: Book=${bookQty}, Count=${countedQty}`});
+                adjustmentCount++;
             }
         });
-
+        localStorage.setItem('sap_opname_history',JSON.stringify(opnameHistory));
         saveState();
-        alert(`Posting Stok Opname Selesai!\nDokumen Adjustment: [${nextDocNum}]\nJumlah Item Penyesuaian: ${postedDocCount}`);
-        resetOpnameForm();
-        switchTab('mmbe');
+        alert(`Hasil opname tersimpan. Item diperiksa: ${rows.length}. Item penyesuaian: ${adjustmentCount}.`);
+        resetOpnameForm(); switchTab('report-opname');
+    }
+
+    function getFilteredOpnameHistory() {
+        const start=document.getElementById('report-opname-start')?.value||'';
+        const end=document.getElementById('report-opname-end')?.value||'';
+        const sloc=(document.getElementById('report-opname-sloc')?.value||'').trim().toLowerCase();
+        const q=(document.getElementById('report-opname-search')?.value||'').trim().toLowerCase();
+        return opnameHistory.filter(r=>(!start||r.date>=start)&&(!end||r.date<=end)&&
+            (!sloc||(r.sloc||'').toLowerCase().includes(sloc))&&
+            (!q||[r.code,r.desc,r.buyer,r.user,r.docNum].some(v=>String(v||'').toLowerCase().includes(q))));
+    }
+    function renderOpnameReport() {
+        const tbody=document.getElementById('report-opname-body'); if(!tbody)return;
+        const rows=getFilteredOpnameHistory();
+        document.getElementById('op-r-total').textContent=rows.length;
+        document.getElementById('op-r-match').textContent=rows.filter(r=>r.variance===0).length;
+        document.getElementById('op-r-plus').textContent=rows.filter(r=>r.variance>0).length;
+        document.getElementById('op-r-minus').textContent=rows.filter(r=>r.variance<0).length;
+        if(!rows.length){tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:14px;">Tidak ada data pada filter ini. Simpan hasil melalui menu Stok Opname.</td></tr>';return;}
+        tbody.innerHTML=rows.map(r=>`<tr><td>${r.date||'-'}</td><td>${r.docNum||'-'}</td><td>${r.sloc||'-'}</td>
+        <td><strong>${r.code}</strong></td><td>${r.desc||'-'}</td><td>${r.buyer||'-'}</td><td>${r.uom||'-'}</td>
+        <td style="text-align:right;">${Number(r.bookQty).toLocaleString('id-ID')}</td>
+        <td style="text-align:right;">${Number(r.countedQty).toLocaleString('id-ID')}</td>
+        <td style="text-align:right;color:${r.variance>0?'green':r.variance<0?'red':'black'};font-weight:bold;">${Number(r.variance).toLocaleString('id-ID')}</td>
+        <td>${r.status}</td><td>${r.user||'-'}</td></tr>`).join('');
+    }
+    function printOpnameReport() {
+        const rows=getFilteredOpnameHistory(); if(!rows.length){alert('Tidak ada data untuk dicetak.');return;}
+        const body=rows.map(r=>`<tr><td>${r.date}</td><td>${r.sloc}</td><td>${r.code}</td><td>${r.desc}</td><td>${r.buyer}</td><td>${r.uom}</td><td>${r.bookQty}</td><td>${r.countedQty}</td><td>${r.variance}</td><td>${r.status}</td><td>${r.user}</td></tr>`).join('');
+        const w=window.open('','_blank'); if(!w){alert('Izinkan pop-up browser untuk mencetak laporan.');return;}
+        w.document.write(`<html><head><title>Report Hasil Stok Opname</title><style>body{font:12px Arial;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}</style></head><body><h2>REPORT HASIL STOK OPNAME</h2><table><thead><tr><th>Tanggal</th><th>Rak</th><th>Kode</th><th>Deskripsi</th><th>Buyer</th><th>UoM</th><th>Stok Sistem</th><th>Fisik</th><th>Selisih</th><th>Status</th><th>Petugas</th></tr></thead><tbody>${body}</tbody></table></body></html>`);
+        w.document.close();w.focus();w.print();
     }
 
     function resetOpnameForm() {
@@ -2199,6 +2247,13 @@
                 csv += `"${m.code}";"${m.buyer}";"${m.desc}";"${m.uom}";${totalStockMap[m.code]||0};"${rakDetails.join(' | ')}";${m.reorder};"${(totalStockMap[m.code]||0) <= m.reorder ? 'Alert' : 'Safe'}"\n`;
             });
             downloadCSV(csv, 'Stock_Overview.csv');
+        } else if (type === 'opname') {
+            csv += "Tanggal;No Dokumen;Kode Rak;Kode Material;Deskripsi;Buyer;Satuan;Stok Sistem;Hasil Fisik;Selisih;Status;Petugas\\n";
+            getFilteredOpnameHistory().forEach(r => {
+                const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+                csv += [r.date,r.docNum,r.sloc,r.code,r.desc,r.buyer,r.uom,r.bookQty,r.countedQty,r.variance,r.status,r.user].map(esc).join(';') + "\\n";
+            });
+            downloadCSV(csv, 'Report_Hasil_Stok_Opname.csv');
         } else if (type === 'mutasi') {
             csv += "Tanggal;No Dokumen;Jenis;Kode;Deskripsi;Style;SLoc;Partner;Ref;Qty;UoM;Text\n";
             mutasiLog.forEach(m => {
