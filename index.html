@@ -308,7 +308,19 @@
         .status-e { background-color: #cc0000; }
         .status-w { background-color: #ff9900; }
 
-        /* FSN Badges */
+        /* Badges */
+        .badge-mvt {
+            padding: 2px 6px;
+            font-weight: bold;
+            border-radius: 3px;
+            font-size: 10px;
+            display: inline-block;
+        }
+        .mvt-gr { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .mvt-gi { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+        .mvt-opname-plus { background-color: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+        .mvt-opname-minus { background-color: #fff3e0; color: #ef6c00; border: 1px solid #ffcc80; }
+
         .badge-fsn {
             padding: 1px 6px;
             font-weight: bold;
@@ -763,7 +775,7 @@
             </div>
         </div>
 
-        <!-- MODUL MODUL BARU: STOK OPNAME (PHYSICAL INVENTORY MI01/MI07) -->
+        <!-- MODUL STOK OPNAME (PHYSICAL INVENTORY MI01/MI07) -->
         <div id="view-stok-opname" style="display: none;">
             <div class="sap-panel">
                 <div class="sap-panel-title">Header Physical Inventory Document (MI01 / MI07)</div>
@@ -855,7 +867,7 @@
             </div>
         </div>
 
-        <!-- MODUL 5: MUTASI BARANG (MB51) -->
+        <!-- MODUL 5: MUTASI BARANG (MB51 - JENIS TERMASUK OPNAME, MASUK, KELUAR) -->
         <div id="view-mb51" style="display: none;">
             <div class="sap-panel">
                 <div class="sap-panel-title">Material Document Movement Log (MB51 Audit Trail)</div>
@@ -865,13 +877,14 @@
                         <input type="text" id="mb51-search" oninput="renderMutasiTable()" placeholder="Cari Dokumen, Kode, Style, SLoc...">
                     </div>
                     <div class="sap-field">
-                        <label>Movement Type</label>
+                        <label>Jenis Mutasi</label>
                         <select id="mb51-mvt-filter" onchange="renderMutasiTable()">
-                            <option value="ALL">Semua</option>
-                            <option value="101">101 - Masuk (GR)</option>
-                            <option value="201">201 - Keluar (GI)</option>
-                            <option value="701">701 - Opname Surplus (+)</option>
-                            <option value="702">702 - Opname Defisit (-)</option>
+                            <option value="ALL">Semua Jenis (Masuk / Keluar / Opname)</option>
+                            <option value="101">Barang Masuk (101 GR)</option>
+                            <option value="201">Barang Keluar (201 GI)</option>
+                            <option value="OPNAME">Semua Opname (701 & 702)</option>
+                            <option value="701">Opname Plus (+ / Surplus)</option>
+                            <option value="702">Opname Minus (- / Defisit)</option>
                         </select>
                     </div>
                     <div style="display: flex; gap: 4px;">
@@ -885,12 +898,12 @@
                             <tr>
                                 <th>Tanggal</th>
                                 <th>No. Dokumen</th>
-                                <th>Jenis</th>
+                                <th style="text-align: center;">Jenis Transaction</th>
                                 <th>Kode Material</th>
                                 <th>Deskripsi Material</th>
                                 <th>Style</th>
                                 <th>SLoc (Rak)</th>
-                                <th>Vendor / Cost Center</th>
+                                <th>Vendor / Cost Center / User</th>
                                 <th>No. Ref</th>
                                 <th style="text-align: right;">Qty</th>
                                 <th>UoM</th>
@@ -1021,12 +1034,19 @@
             <div class="sap-form-grid" style="grid-template-columns: 1fr;">
                 <div class="sap-field"><label>No. Dokumen</label><input type="text" id="edit-mutasi-docnum" readonly style="background:#eee; font-weight:bold;"></div>
                 <div class="sap-field"><label>Posting Date *</label><input type="date" id="edit-mutasi-date" required></div>
-                <div class="sap-field"><label>Jenis *</label><select id="edit-mutasi-mvt" required><option value="101">101 - Masuk</option><option value="201">201 - Keluar</option><option value="701">701 - Opname Plus</option><option value="702">702 - Opname Minus</option></select></div>
+                <div class="sap-field"><label>Jenis Mutasi *</label>
+                    <select id="edit-mutasi-mvt" required>
+                        <option value="101">101 - Barang Masuk (GR)</option>
+                        <option value="201">201 - Barang Keluar (GI)</option>
+                        <option value="701">701 - Opname Plus (+ Surplus)</option>
+                        <option value="702">702 - Opname Minus (- Defisit)</option>
+                    </select>
+                </div>
                 <div class="sap-field"><label>Kode Material</label><input type="text" id="edit-mutasi-code" readonly style="background:#eee; font-weight:bold;"></div>
                 <div class="sap-field"><label>Deskripsi</label><input type="text" id="edit-mutasi-desc" readonly style="background:#eee;"></div>
                 <div class="sap-field"><label>Style</label><input type="text" id="edit-mutasi-style" placeholder="Kode Style (opsional)"></div>
                 <div class="sap-field"><label>SLoc (Rak)</label><input type="text" id="edit-mutasi-sloc" placeholder="Lokasi Rak"></div>
-                <div class="sap-field"><label>Partner / Supplier</label><input type="text" id="edit-mutasi-partner" placeholder="Supplier / Division"></div>
+                <div class="sap-field"><label>Partner / Supplier</label><input type="text" id="edit-mutasi-partner" placeholder="Supplier / Division / User"></div>
                 <div class="sap-field"><label>No. Ref / PO / WO</label><input type="text" id="edit-mutasi-ref" placeholder="No Reference"></div>
                 <div class="sap-field"><label>Jumlah / Qty *</label><input type="number" id="edit-mutasi-qty" step="any" min="0.01" required style="font-weight:bold;"></div>
                 <div class="sap-field"><label>Item Text</label><input type="text" id="edit-mutasi-text" placeholder="Catatan Transaksi"></div>
@@ -1076,8 +1096,8 @@
                             <th>SLoc (Rak)</th>
                             <th>Partner / Ref</th>
                             <th>Keterangan</th>
-                            <th style="text-align: right; color: green;">Masuk (+)</th>
-                            <th style="text-align: right; color: red;">Keluar (-)</th>
+                            <th style="text-align: right; color: green;">Masuk / Surplus (+)</th>
+                            <th style="text-align: right; color: red;">Keluar / Defisit (-)</th>
                             <th style="text-align: right; font-weight: bold;">Saldo Akhir</th>
                         </tr>
                     </thead>
@@ -1106,7 +1126,8 @@
         { docNum: "5000000002", date: "2026-10-02", mvt: "101", code: "MAT-1002", desc: "Benang Jahit 40/2 White", style: "-", sloc: "RAK-A3", partner: "CV Benang Jaya", ref: "PO-9002", qty: 50, uom: "ROLL", text: "Stok Benang" },
         { docNum: "5000000003", date: "2026-10-03", mvt: "101", code: "MAT-1003", desc: "Kancing Kemeja 18L", style: "-", sloc: "RAK-B1", partner: "PT Aksesoris Garment", ref: "PO-9003", qty: 1200, uom: "PCS", text: "Penerimaan Kancing" },
         { docNum: "5000000004", date: "2026-10-05", mvt: "201", code: "MAT-1001", desc: "Kain Katun Combed 30S", style: "ST-TSHIRT-01", sloc: "RAK-A1", partner: "Line Sewing 1", ref: "WO-801", qty: 30, uom: "KG", text: "Pemakaian Rak A1" },
-        { docNum: "5000000005", date: "2026-10-10", mvt: "201", code: "MAT-1002", desc: "Benang Jahit 40/2 White", style: "ST-POLO-02", sloc: "RAK-A3", partner: "Line Sewing 2", ref: "WO-802", qty: 15, uom: "ROLL", text: "Pemakaian Line 2" }
+        { docNum: "5000000005", date: "2026-10-10", mvt: "201", code: "MAT-1002", desc: "Benang Jahit 40/2 White", style: "ST-POLO-02", sloc: "RAK-A3", partner: "Line Sewing 2", ref: "WO-802", qty: 15, uom: "ROLL", text: "Pemakaian Line 2" },
+        { docNum: "7000000001", date: "2026-10-15", mvt: "701", code: "MAT-1001", desc: "Kain Katun Combed 30S", style: "-", sloc: "RAK-A1", partner: "Auditor Gudang", ref: "PHYS-OPNAME-RAK-A1", qty: 5, uom: "KG", text: "Opname Adjustment: Surplus +5 KG" }
     ];
 
     let materials = JSON.parse(localStorage.getItem('sap_materials')) || DEFAULT_MATERIALS;
@@ -1675,7 +1696,7 @@
         else tbody.innerHTML = alerts.map(({mat,stock,reorder}) => `<tr><td><strong>${mat.code}</strong></td><td>${mat.desc}</td><td>${mat.buyer}</td><td style="text-align:right;font-weight:bold;color:#b00000;">${stock} ${mat.uom}</td><td style="text-align:right;">${reorder}</td><td class="dash-alert">Reorder Alert</td></tr>`).join('');
     }
 
-    /* KALKULASI STOK SESUAI DOKUMEN MUTASI (101/701 MASUK, 201/702 KELUAR) */
+    /* KALKULASI STOK (101/701 MASUK, 201/702 KELUAR) */
     function calculateCurrentStockMapBySLoc() {
         const map = {};
         mutasiLog.forEach(log => {
@@ -1886,6 +1907,7 @@
         downloadCSV(csv, `Kartu_Stok_${currentLedgerCode}.csv`);
     }
 
+    /* FORMAT KETERANGAN JENIS MUTASI YANG JELAS DI TABEL MB51 */
     function renderMutasiTable() {
         const search = document.getElementById('mb51-search').value.toLowerCase();
         const mvtFilter = document.getElementById('mb51-mvt-filter').value;
@@ -1893,20 +1915,24 @@
         tbody.innerHTML = '';
 
         mutasiLog.forEach((log, index) => {
-            if (mvtFilter !== 'ALL' && log.mvt !== mvtFilter) return;
+            // Logika Filter Dropdown
+            if (mvtFilter === 'OPNAME' && log.mvt !== '701' && log.mvt !== '702') return;
+            if (mvtFilter !== 'ALL' && mvtFilter !== 'OPNAME' && log.mvt !== mvtFilter) return;
+
             if (search && !log.docNum.toLowerCase().includes(search) && !log.code.toLowerCase().includes(search) && !log.desc.toLowerCase().includes(search) && !(log.sloc && log.sloc.toLowerCase().includes(search))) return;
 
-            let mvtLabel = log.mvt;
-            if (log.mvt === '101') mvtLabel = '<span style="color:green;">101 (GR)</span>';
-            else if (log.mvt === '201') mvtLabel = '<span style="color:red;">201 (GI)</span>';
-            else if (log.mvt === '701') mvtLabel = '<span style="color:blue;">701 (Opname +)</span>';
-            else if (log.mvt === '702') mvtLabel = '<span style="color:orange;">702 (Opname -)</span>';
+            let mvtBadge = '';
+            if (log.mvt === '101') mvtBadge = '<span class="badge-mvt mvt-gr">Masuk (GR)</span>';
+            else if (log.mvt === '201') mvtBadge = '<span class="badge-mvt mvt-gi">Keluar (GI)</span>';
+            else if (log.mvt === '701') mvtBadge = '<span class="badge-mvt mvt-opname-plus">Opname (+)</span>';
+            else if (log.mvt === '702') mvtBadge = '<span class="badge-mvt mvt-opname-minus">Opname (-)</span>';
+            else mvtBadge = `<span class="badge-mvt">${log.mvt}</span>`;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${log.date}</td>
                 <td><strong>${log.docNum}</strong></td>
-                <td style="text-align:center;">${mvtLabel}</td>
+                <td style="text-align:center;">${mvtBadge}</td>
                 <td>${log.code}</td>
                 <td>${log.desc}</td>
                 <td>${log.style || '-'}</td>
