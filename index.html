@@ -347,9 +347,19 @@
         #print-sheet-container { display: none; }
         .no-print { display: block; }
 
-        /* RESPONSIVE CSS MEDIA QUERIES FOR MOBILE DEVICES */
+        /* SKALA SKALA DESKTOP 20% LEBIH BESAR */
+        @media (min-width: 1024px) {
+            body {
+                zoom: 1.2; /* Memperbesar tampilan dekstop 20% */
+            }
+        }
+
+        /* RESPONSIVE MOBILE OPTIMIZATION */
         @media(max-width: 768px) {
-            body { padding: 2px; }
+            body { 
+                padding: 2px; 
+                zoom: 1.0; /* Skala normal untuk HP */
+            }
             .dash-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
             .dash-layout { grid-template-columns: 1fr; }
             .sap-form-grid { grid-template-columns: 1fr; }
@@ -359,13 +369,14 @@
         }
 
         @media print {
-            .no-print, .sap-titlebar, .sap-menubar, .sap-toolbar, .sap-tabs, .sap-statusbar, .sap-window {
-                display: none !important;
-            }
             body { 
+                zoom: 1.0 !important;
                 background: #fff !important; 
                 margin: 0; 
                 padding: 10px; 
+            }
+            .no-print, .sap-titlebar, .sap-menubar, .sap-toolbar, .sap-tabs, .sap-statusbar, .sap-window {
+                display: none !important;
             }
             #print-sheet-container {
                 display: grid !important;
@@ -602,9 +613,7 @@
                                 <th>Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="grid-master-body">
-                            <!-- Populated dynamically -->
-                        </tbody>
+                        <tbody id="grid-master-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -656,9 +665,7 @@
                                 <th style="width: 40px;">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="rows-migo-gr">
-                            <!-- Dynamic Row Input -->
-                        </tbody>
+                        <tbody id="rows-migo-gr"></tbody>
                     </table>
                 </div>
             </div>
@@ -710,9 +717,7 @@
                                 <th style="width: 40px;">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="rows-migo-gi">
-                            <!-- Dynamic Row Input -->
-                        </tbody>
+                        <tbody id="rows-migo-gi"></tbody>
                     </table>
                 </div>
             </div>
@@ -753,9 +758,7 @@
                                 <th>Kartu Stok</th>
                             </tr>
                         </thead>
-                        <tbody id="grid-stock-body">
-                            <!-- Sorted by Material Code Data Output -->
-                        </tbody>
+                        <tbody id="grid-stock-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -768,9 +771,7 @@
                 <div class="sap-form-grid" style="margin-bottom: 6px;">
                     <div class="sap-field">
                         <label>Pilih Style</label>
-                        <select id="rekap-style-select" onchange="renderRekapStyleTable()">
-                            <!-- Populated dynamically -->
-                        </select>
+                        <select id="rekap-style-select" onchange="renderRekapStyleTable()"></select>
                     </div>
                     <div class="sap-field">
                         <label>Search Keyword</label>
@@ -796,15 +797,13 @@
                                 <th>Tgl Terakhir Issue</th>
                             </tr>
                         </thead>
-                        <tbody id="grid-rekap-style-body">
-                            <!-- Rekap Style Rows -->
-                        </tbody>
+                        <tbody id="grid-rekap-style-body"></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- MODUL 5: MUTASI BARANG (MB51) - EDIT & HAPUS TERSEDIA -->
+        <!-- MODUL 5: MUTASI BARANG (MB51) -->
         <div id="view-mb51" style="display: none;">
             <div class="sap-panel">
                 <div class="sap-panel-title">Material Document Movement Log (MB51 Audit Trail)</div>
@@ -845,9 +844,7 @@
                                 <th style="text-align: center;">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="grid-mutasi-body">
-                            <!-- Movement Log Table -->
-                        </tbody>
+                        <tbody id="grid-mutasi-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -887,9 +884,7 @@
                                 <th>Status Movement</th>
                             </tr>
                         </thead>
-                        <tbody id="grid-fsn-body">
-                            <!-- FSN Analysis Dynamic Rows -->
-                        </tbody>
+                        <tbody id="grid-fsn-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -914,13 +909,10 @@
                                 <th>Daftar Kode Material Terkait</th>
                             </tr>
                         </thead>
-                        <tbody id="grid-print-sloc-body">
-                            <!-- Populated dynamically based on unique SLoc from Mutasi Masuk -->
-                        </tbody>
+                        <tbody id="grid-print-sloc-body"></tbody>
                     </table>
                 </div>
 
-                <!-- Preview Area Single -->
                 <div class="sap-panel" style="background: #fff; padding: 15px; text-align: center; max-width: 380px; margin: 0 auto; border: 2px dashed #404040;">
                     <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; color: #000080;">GARMENT WAREHOUSE LOCATION</div>
                     <div id="barcode-container" style="padding: 5px;">
@@ -943,13 +935,8 @@
     </div>
 </div>
 
-<!-- HIDDEN PROFESSIONAL PRINT SHEET CONTAINER -->
 <div id="print-sheet-container"></div>
-
-<!-- GLOBAL DATALIST FOR AUTOCOMPLETE MATERIAL SEARCH -->
-<datalist id="global-material-list">
-    <!-- Populated dynamically via JS -->
-</datalist>
+<datalist id="global-material-list"></datalist>
 
 <!-- MODAL POPUP: SCANNER KAMERA BARCODE -->
 <div id="modal-scanner" class="sap-modal">
@@ -972,59 +959,23 @@
 <div id="modal-edit-mutasi" class="sap-modal">
     <div class="sap-modal-content" style="max-width: 550px;">
         <div class="sap-titlebar">
-            <span id="edit-mutasi-title">Edit Dokumen Material - [DOC_NUM]</span>
+            <span id="edit-mutasi-title">Edit Dokumen Material</span>
             <button class="sap-btn sap-btn-red" onclick="closeEditMutasiModal()" style="height:18px; line-height:10px;">X</button>
         </div>
         <form id="form-edit-mutasi" onsubmit="saveEditMutasi(event)" style="padding: 10px;">
             <input type="hidden" id="edit-mutasi-index">
             <div class="sap-form-grid" style="grid-template-columns: 1fr;">
-                <div class="sap-field">
-                    <label>No. Dokumen</label>
-                    <input type="text" id="edit-mutasi-docnum" readonly style="background:#eee; font-weight:bold;">
-                </div>
-                <div class="sap-field">
-                    <label>Posting Date *</label>
-                    <input type="date" id="edit-mutasi-date" required>
-                </div>
-                <div class="sap-field">
-                    <label>Jenis *</label>
-                    <select id="edit-mutasi-mvt" required>
-                        <option value="101">Masuk</option>
-                        <option value="201">Keluar</option>
-                    </select>
-                </div>
-                <div class="sap-field">
-                    <label>Kode Material</label>
-                    <input type="text" id="edit-mutasi-code" readonly style="background:#eee; font-weight:bold;">
-                </div>
-                <div class="sap-field">
-                    <label>Deskripsi</label>
-                    <input type="text" id="edit-mutasi-desc" readonly style="background:#eee;">
-                </div>
-                <div class="sap-field">
-                    <label>Style</label>
-                    <input type="text" id="edit-mutasi-style" placeholder="Kode Style (opsional)">
-                </div>
-                <div class="sap-field">
-                    <label>SLoc (Rak)</label>
-                    <input type="text" id="edit-mutasi-sloc" placeholder="Lokasi Rak">
-                </div>
-                <div class="sap-field">
-                    <label>Partner / Supplier</label>
-                    <input type="text" id="edit-mutasi-partner" placeholder="Supplier / Division">
-                </div>
-                <div class="sap-field">
-                    <label>No. Ref / PO / WO</label>
-                    <input type="text" id="edit-mutasi-ref" placeholder="No Reference">
-                </div>
-                <div class="sap-field">
-                    <label>Jumlah / Qty *</label>
-                    <input type="number" id="edit-mutasi-qty" step="any" min="0.01" required style="font-weight:bold;">
-                </div>
-                <div class="sap-field">
-                    <label>Item Text</label>
-                    <input type="text" id="edit-mutasi-text" placeholder="Catatan Transaksi">
-                </div>
+                <div class="sap-field"><label>No. Dokumen</label><input type="text" id="edit-mutasi-docnum" readonly style="background:#eee; font-weight:bold;"></div>
+                <div class="sap-field"><label>Posting Date *</label><input type="date" id="edit-mutasi-date" required></div>
+                <div class="sap-field"><label>Jenis *</label><select id="edit-mutasi-mvt" required><option value="101">Masuk</option><option value="201">Keluar</option></select></div>
+                <div class="sap-field"><label>Kode Material</label><input type="text" id="edit-mutasi-code" readonly style="background:#eee; font-weight:bold;"></div>
+                <div class="sap-field"><label>Deskripsi</label><input type="text" id="edit-mutasi-desc" readonly style="background:#eee;"></div>
+                <div class="sap-field"><label>Style</label><input type="text" id="edit-mutasi-style" placeholder="Kode Style (opsional)"></div>
+                <div class="sap-field"><label>SLoc (Rak)</label><input type="text" id="edit-mutasi-sloc" placeholder="Lokasi Rak"></div>
+                <div class="sap-field"><label>Partner / Supplier</label><input type="text" id="edit-mutasi-partner" placeholder="Supplier / Division"></div>
+                <div class="sap-field"><label>No. Ref / PO / WO</label><input type="text" id="edit-mutasi-ref" placeholder="No Reference"></div>
+                <div class="sap-field"><label>Jumlah / Qty *</label><input type="number" id="edit-mutasi-qty" step="any" min="0.01" required style="font-weight:bold;"></div>
+                <div class="sap-field"><label>Item Text</label><input type="text" id="edit-mutasi-text" placeholder="Catatan Transaksi"></div>
             </div>
             <div style="margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px;">
                 <button type="button" class="sap-btn" onclick="closeEditMutasiModal()">Batal</button>
@@ -1038,11 +989,10 @@
 <div id="modal-ledger" class="sap-modal">
     <div class="sap-modal-content">
         <div class="sap-titlebar">
-            <span id="ledger-modal-title">Kartu Stok Ledger - [MATERIAL]</span>
+            <span id="ledger-modal-title">Kartu Stok Ledger</span>
             <button class="sap-btn sap-btn-red" onclick="closeLedgerModal()" style="height:18px; line-height:10px;">X</button>
         </div>
         <div style="padding: 10px; background: var(--sap-bg); flex-grow: 1; overflow-y: auto;">
-            <!-- Header Summary Box -->
             <div class="sap-panel" style="margin-bottom: 8px;">
                 <div class="sap-panel-title">Informasi Material</div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
@@ -1054,7 +1004,6 @@
                 </div>
             </div>
 
-            <!-- Date Filter & Actions -->
             <div class="no-print" style="margin-bottom: 8px; display: flex; gap: 8px; align-items: center;">
                 <label>Dari:</label> <input type="date" id="ledger-start-date" style="border:1px solid #808080;">
                 <label>s/d:</label> <input type="date" id="ledger-end-date" style="border:1px solid #808080;">
@@ -1063,7 +1012,6 @@
                 <button class="sap-btn" onclick="exportLedgerCSV()">📥 Export CSV</button>
             </div>
 
-            <!-- Ledger Table -->
             <div class="sap-grid-container" style="max-height: 350px;">
                 <table class="sap-grid">
                     <thead>
@@ -1079,9 +1027,7 @@
                             <th style="text-align: right; font-weight: bold;">Saldo Akhir</th>
                         </tr>
                     </thead>
-                    <tbody id="ledger-table-body">
-                        <!-- Dynamic Ledger Rows -->
-                    </tbody>
+                    <tbody id="ledger-table-body"></tbody>
                 </table>
             </div>
         </div>
@@ -1092,7 +1038,6 @@
 </div>
 
 <script>
-    // INITIALIZATION & LOCALSTORAGE MANAGEMENT
     const DEFAULT_MATERIALS = [
         { code: "MAT-1001", desc: "Kain Katun Combed 30S", buyer: "Nike", uom: "KG", reorder: 50 },
         { code: "MAT-1002", desc: "Benang Jahit 40/2 White", buyer: "Adidas", uom: "ROLL", reorder: 20 },
@@ -1217,7 +1162,6 @@
         document.getElementById('tcode-input').value = '';
     }
 
-    // CETAK BARCODE KODE RAK
     function initPrintBarcodeModule() {
         const tbody = document.getElementById('grid-print-sloc-body');
         if (!tbody) return;
@@ -1246,39 +1190,24 @@
             tbody.appendChild(tr);
         });
 
-        if (uniqueSlocs.length > 0) {
-            previewSingleBarcode(uniqueSlocs[0]);
-        }
+        if (uniqueSlocs.length > 0) previewSingleBarcode(uniqueSlocs[0]);
     }
 
     function toggleSelectAllSloc(masterChk) {
-        const checkboxes = document.querySelectorAll('.sloc-checkbox');
-        checkboxes.forEach(chk => chk.checked = masterChk.checked);
+        document.querySelectorAll('.sloc-checkbox').forEach(chk => chk.checked = masterChk.checked);
     }
 
     function previewSingleBarcode(text) {
         try {
-            JsBarcode("#barcode-element", text, {
-                format: "CODE128",
-                lineColor: "#000",
-                width: 2,
-                height: 55,
-                displayValue: true
-            });
+            JsBarcode("#barcode-element", text, { format: "CODE128", lineColor: "#000", width: 2, height: 55, displayValue: true });
             document.getElementById('barcode-label-text').innerText = text;
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     }
 
     function generatePrintSheet(slocList) {
         const container = document.getElementById('print-sheet-container');
         container.innerHTML = '';
-
-        if (slocList.length === 0) {
-            alert('Pilih minimal satu lokasi rak untuk dicetak!');
-            return false;
-        }
+        if (slocList.length === 0) { alert('Pilih minimal satu lokasi rak untuk dicetak!'); return false; }
 
         slocList.forEach((sloc, index) => {
             const card = document.createElement('div');
@@ -1295,72 +1224,37 @@
 
         slocList.forEach((sloc, index) => {
             try {
-                JsBarcode(`#print-barcode-${index}`, sloc, {
-                    format: "CODE128",
-                    lineColor: "#000",
-                    width: 2.5,
-                    height: 60,
-                    displayValue: true,
-                    fontSize: 14
-                });
-            } catch(e) {
-                console.error(e);
-            }
+                JsBarcode(`#print-barcode-${index}`, sloc, { format: "CODE128", lineColor: "#000", width: 2.5, height: 60, displayValue: true, fontSize: 14 });
+            } catch(e) { console.error(e); }
         });
-
         return true;
     }
 
     function printSelectedBarcodes() {
-        const checkedBoxes = document.querySelectorAll('.sloc-checkbox:checked');
-        const slocs = [];
-        checkedBoxes.forEach(chk => slocs.push(chk.value));
-
-        if (generatePrintSheet(slocs)) {
-            window.print();
-        }
+        const slocs = Array.from(document.querySelectorAll('.sloc-checkbox:checked')).map(chk => chk.value);
+        if (generatePrintSheet(slocs)) window.print();
     }
 
     function printAllBarcodes() {
         const slocSet = new Set();
-        mutasiLog.forEach(log => {
-            if (log.sloc && log.sloc !== '-') slocSet.add(log.sloc.trim().toUpperCase());
-        });
-        const slocs = Array.from(slocSet);
-
-        if (generatePrintSheet(slocs)) {
-            window.print();
-        }
+        mutasiLog.forEach(log => { if (log.sloc && log.sloc !== '-') slocSet.add(log.sloc.trim().toUpperCase()); });
+        if (generatePrintSheet(Array.from(slocSet))) window.print();
     }
 
-    // SCAN BARCODE KAMERA
     function openScannerModal(targetType) {
         activeScannerTarget = targetType;
         document.getElementById('modal-scanner').style.display = 'flex';
         document.getElementById('scanner-result-info').innerText = "Arahkan kamera ke barcode material atau rak...";
 
         setTimeout(() => {
-            if (!html5QrcodeScanner) {
-                html5QrcodeScanner = new Html5Qrcode("reader");
-            }
-            html5QrcodeScanner.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 150 } },
-                onScanSuccess,
-                onScanFailure
-            ).catch(err => {
-                console.error("Gagal membuka kamera:", err);
-                document.getElementById('scanner-result-info').innerText = "Gagal mengakses kamera perangkat. Pastikan izin kamera diaktifkan.";
-            });
+            if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, onScanFailure)
+            .catch(err => { document.getElementById('scanner-result-info').innerText = "Gagal mengakses kamera perangkat."; });
         }, 300);
     }
 
     function closeScannerModal() {
-        if (html5QrcodeScanner) {
-            html5QrcodeScanner.stop().then(() => {
-                html5QrcodeScanner.clear();
-            }).catch(err => console.error("Stop scanner error:", err));
-        }
+        if (html5QrcodeScanner) html5QrcodeScanner.stop().then(() => html5QrcodeScanner.clear()).catch(err => {});
         document.getElementById('modal-scanner').style.display = 'none';
     }
 
@@ -1372,7 +1266,6 @@
         if (activeScannerTarget === 'stock-search') {
             document.getElementById('stock-search').value = cleanText;
             renderStockTable();
-            showStatus(`Barcode terdeteksi: ${cleanText}`, 'S');
         } else if (activeScannerTarget === 'gr-line' || activeScannerTarget === 'gi-line') {
             const type = activeScannerTarget === 'gr-line' ? 'gr' : 'gi';
             const tbody = document.getElementById(`rows-migo-${type}`);
@@ -1385,17 +1278,14 @@
             inputMat.value = cleanText;
             if (type === 'gr') onMigoMaterialInput(inputMat);
             else onMigoGiMaterialInput(inputMat);
-            showStatus(`Item ditambahkan via Scan Barcode: ${cleanText}`, 'S');
         }
     }
 
     function onScanFailure(error) {}
 
-    // MASTER DATA MATERIAL (MM60)
     function renderMasterTable() {
         const tbody = document.getElementById('grid-master-body');
         tbody.innerHTML = '';
-
         materials.forEach((mat) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -1422,82 +1312,63 @@
         const reorder = parseFloat(document.getElementById('mm-reorder').value) || 0;
 
         const existingIndex = materials.findIndex(m => m.code === code);
-
-        if (existingIndex >= 0) {
-            materials[existingIndex] = { code, desc, buyer, uom, reorder };
-            showStatus(`Material Master [${code}] berhasil diperbarui`, 'S');
-        } else {
-            materials.push({ code, desc, buyer, uom, reorder });
-            showStatus(`Material Master [${code}] berhasil dibuat`, 'S');
-        }
+        if (existingIndex >= 0) materials[existingIndex] = { code, desc, buyer, uom, reorder };
+        else materials.push({ code, desc, buyer, uom, reorder });
 
         saveState();
         resetMasterForm();
         renderMasterTable();
+        showStatus(`Material Master [${code}] tersimpan`, 'S');
     }
 
     function editMaterial(code) {
         const mat = materials.find(m => m.code === code);
         if (!mat) return;
-
         document.getElementById('mm-code').value = mat.code;
         document.getElementById('mm-desc').value = mat.desc;
         document.getElementById('mm-buyer').value = mat.buyer || '';
         document.getElementById('mm-uom').value = mat.uom;
         document.getElementById('mm-reorder').value = mat.reorder || 0;
-
-        showStatus(`Mengedit Material Master [${code}]`, 'W');
     }
 
     function deleteMaterial(code) {
-        const hasHistory = mutasiLog.some(m => m.code === code);
-        if (hasHistory) {
-            alert(`Tidak dapat menghapus [${code}] karena memiliki riwayat mutasi barang!`);
-            showStatus(`Gagal hapus: Material [${code}] memiliki riwayat transaksi`, 'E');
-            return;
-        }
-
-        if (confirm(`Apakah Anda yakin ingin menghapus Master Material [${code}]?`)) {
+        if (mutasiLog.some(m => m.code === code)) { alert(`Tidak dapat menghapus [${code}] karena memiliki riwayat mutasi!`); return; }
+        if (confirm(`Hapus Master Material [${code}]?`)) {
             materials = materials.filter(m => m.code !== code);
             saveState();
             renderMasterTable();
-            showStatus(`Material Master [${code}] telah dihapus`, 'S');
         }
     }
 
-    function resetMasterForm() {
-        document.getElementById('form-master-material').reset();
-    }
+    function resetMasterForm() { document.getElementById('form-master-material').reset(); }
 
-    // MULTI ITEM MIGO (MIGO-GR / MIGO-GI) AUTO-SLOC
     function addMigoRow(type) {
         const tbody = document.getElementById(`rows-migo-${type}`);
         const itemCount = (tbody.children.length + 1) * 10;
-
         const tr = document.createElement('tr');
+
         if (type === 'gr') {
             tr.innerHTML = `
                 <td style="text-align:center;">${itemCount}</td>
-                <td><input type="text" list="global-material-list" oninput="onMigoMaterialInput(this)" class="migo-mat-input" placeholder="Ketik Kode/Nama..." style="text-transform: uppercase;"></td>
+                <td><input type="text" list="global-material-list" oninput="onMigoMaterialInput(this)" class="migo-mat-input" placeholder="Kode..." style="text-transform: uppercase;"></td>
                 <td><input type="text" class="migo-desc" readonly style="background:#eee;"></td>
-                <td><input type="text" class="migo-style" placeholder="Kode Style"></td>
+                <td><input type="text" class="migo-style" placeholder="Style"></td>
                 <td><input type="number" class="migo-qty" min="0" value="0" style="text-align:right;"></td>
                 <td><input type="text" class="migo-uom" readonly style="background:#eee; text-align:center;"></td>
-                <td><input type="text" class="migo-sloc" placeholder="Wajib diisi (Rak)" required></td>
-                <td><input type="text" class="migo-text" placeholder="Catatan item"></td>
+                <td><input type="text" class="migo-sloc" placeholder="Rak *" required></td>
+                <td><input type="text" class="migo-text" placeholder="Catatan"></td>
                 <td style="text-align:center;"><button class="sap-btn sap-btn-red" onclick="this.closest('tr').remove(); reindexMigoRows('${type}');">X</button></td>
             `;
         } else {
-            // MIGO-GI: SLoc otomatis mereferensikan rak material
             tr.innerHTML = `
                 <td style="text-align:center;">${itemCount}</td>
-                <td><input type="text" list="global-material-list" oninput="onMigoGiMaterialInput(this)" class="migo-mat-input" placeholder="Ketik Kode/Nama..." style="text-transform: uppercase;"></td>
+                <td><input type="text" list="global-material-list" oninput="onMigoGiMaterialInput(this)" class="migo-mat-input" placeholder="Kode..." style="text-transform: uppercase;"></td>
                 <td><input type="text" class="migo-desc" readonly style="background:#eee;"></td>
-                <td><input type="text" class="migo-style" placeholder="Kode Style"></td>
+                <td><input type="text" class="migo-style" placeholder="Style"></td>
                 <td><input type="number" class="migo-qty" min="0" value="0" style="text-align:right;"></td>
                 <td><input type="text" class="migo-uom" readonly style="background:#eee; text-align:center;"></td>
-                <td><input type="text" class="migo-sloc" placeholder="SLoc Otomatis / Pilih Rak" style="background:#f0f8ff; font-weight:bold;"></td>
-                <td><input type="text" class="migo-text" placeholder="Catatan item"></td>
+                <td><input type="text" class="migo-sloc" placeholder="Rak Otomatis" style="background:#f0f8ff; font-weight:bold;"></td>
+                <td><input type="text" class="migo-text" placeholder="Catatan"></td>
                 <td style="text-align:center;"><button class="sap-btn sap-btn-red" onclick="this.closest('tr').remove(); reindexMigoRows('${type}');">X</button></td>
             `;
         }
@@ -1505,24 +1376,15 @@
     }
 
     function reindexMigoRows(type) {
-        const rows = document.querySelectorAll(`#rows-migo-${type} tr`);
-        rows.forEach((row, index) => {
-            row.cells[0].innerText = (index + 1) * 10;
-        });
+        document.querySelectorAll(`#rows-migo-${type} tr`).forEach((row, index) => { row.cells[0].innerText = (index + 1) * 10; });
     }
 
     function onMigoMaterialInput(inputElem) {
         const val = inputElem.value.trim().toUpperCase();
         const tr = inputElem.closest('tr');
         const mat = materials.find(m => m.code.toUpperCase() === val);
-
-        if (mat) {
-            tr.querySelector('.migo-desc').value = mat.desc;
-            tr.querySelector('.migo-uom').value = mat.uom;
-        } else {
-            tr.querySelector('.migo-desc').value = '';
-            tr.querySelector('.migo-uom').value = '';
-        }
+        tr.querySelector('.migo-desc').value = mat ? mat.desc : '';
+        tr.querySelector('.migo-uom').value = mat ? mat.uom : '';
     }
 
     function onMigoGiMaterialInput(inputElem) {
@@ -1535,19 +1397,14 @@
             tr.querySelector('.migo-uom').value = mat.uom;
 
             const stockBySLoc = calculateCurrentStockMapBySLoc();
-            let matchedSloc = '';
-            let maxQty = -999;
-
+            let matchedSloc = '', maxQty = -999;
             Object.keys(stockBySLoc).forEach(key => {
                 const [mCode, slocName] = key.split('__');
-                if (mCode === mat.code && stockBySLoc[key] > 0) {
-                    if (stockBySLoc[key] > maxQty) {
-                        maxQty = stockBySLoc[key];
-                        matchedSloc = slocName;
-                    }
+                if (mCode === mat.code && stockBySLoc[key] > maxQty) {
+                    maxQty = stockBySLoc[key];
+                    matchedSloc = slocName;
                 }
             });
-
             tr.querySelector('.migo-sloc').value = matchedSloc || '';
         } else {
             tr.querySelector('.migo-desc').value = '';
@@ -1564,136 +1421,78 @@
         const headerNote = document.getElementById(`${type}-header-note`).value.trim();
 
         const rows = document.querySelectorAll(`#rows-migo-${type} tr`);
-        if (rows.length === 0) {
-            alert('Harap tambahkan minimal 1 baris material!');
-            return;
-        }
+        if (rows.length === 0) { alert('Harap tambahkan minimal 1 baris material!'); return; }
 
         const currentStocks = calculateCurrentStockMapBySLoc();
-        let itemsToPost = [];
-        let isValid = true;
+        let itemsToPost = [], isValid = true;
 
         rows.forEach((tr, idx) => {
             const matCode = tr.querySelector('.migo-mat-input').value.trim().toUpperCase();
             const desc = tr.querySelector('.migo-desc').value;
-            const styleElem = tr.querySelector('.migo-style');
-            const style = styleElem ? styleElem.value.trim() : '-';
+            const style = tr.querySelector('.migo-style').value.trim() || '-';
             const qty = parseFloat(tr.querySelector('.migo-qty').value) || 0;
             const uom = tr.querySelector('.migo-uom').value;
             const sloc = tr.querySelector('.migo-sloc').value.trim().toUpperCase();
             const itemText = tr.querySelector('.migo-text').value;
 
             const matCheck = materials.find(m => m.code.toUpperCase() === matCode);
-            if (!matCheck) {
-                alert(`Baris ${idx + 1}: Kode Material [${matCode}] tidak terdaftar di Master Material!`);
-                isValid = false;
-                return;
+            if (!matCheck) { alert(`Baris ${idx + 1}: Kode Material tidak valid!`); isValid = false; return; }
+            if (qty <= 0) { alert(`Baris ${idx + 1}: Qty harus > 0!`); isValid = false; return; }
+            if (!sloc) { alert(`Baris ${idx + 1}: Rak (SLoc) wajib diisi!`); isValid = false; return; }
+
+            if (mvtType === '201' && qty > (currentStocks[`${matCheck.code}__${sloc}`] || 0)) {
+                alert(`Baris ${idx + 1}: Stok di rak [${sloc}] tidak mencukupi!`); isValid = false; return;
             }
 
-            if (qty <= 0) {
-                alert(`Baris ${idx + 1}: Jumlah/Qty harus lebih besar dari 0!`);
-                isValid = false;
-                return;
-            }
-
-            if (!sloc) {
-                alert(`Baris ${idx + 1}: Lokasi Rak (SLoc) wajib diisi!`);
-                isValid = false;
-                return;
-            }
-
-            if (mvtType === '201') {
-                const key = `${matCheck.code}__${sloc}`;
-                const availStockInSloc = currentStocks[key] || 0;
-                if (qty > availStockInSloc) {
-                    alert(`Baris ${idx + 1}: Stok di rak [${sloc}] tidak mencukupi untuk [${matCheck.code}]. Stok di rak ini: ${availStockInSloc}, diminta: ${qty}`);
-                    isValid = false;
-                    return;
-                }
-            }
-
-            itemsToPost.push({
-                code: matCheck.code,
-                desc: desc || matCheck.desc,
-                style: style || '-',
-                sloc: sloc,
-                qty: qty,
-                uom: uom || matCheck.uom,
-                text: itemText || headerNote
-            });
+            itemsToPost.push({ code: matCheck.code, desc: desc || matCheck.desc, style, sloc, qty, uom: uom || matCheck.uom, text: itemText || headerNote });
         });
 
         if (!isValid) return;
 
         const nextDocNum = 5000000000 + mutasiLog.length + 1;
-
         itemsToPost.forEach(item => {
-            mutasiLog.unshift({
-                docNum: nextDocNum.toString(),
-                date: date,
-                mvt: mvtType,
-                code: item.code,
-                desc: item.desc,
-                style: item.style,
-                sloc: item.sloc,
-                partner: partner || (mvtType === '101' ? 'Supplier' : 'Internal Issue'),
-                ref: ref || '-',
-                qty: item.qty,
-                uom: item.uom,
-                text: item.text
-            });
+            mutasiLog.unshift({ docNum: nextDocNum.toString(), date, mvt: mvtType, code: item.code, desc: item.desc, style: item.style, sloc: item.sloc, partner: partner || 'General', ref: ref || '-', qty: item.qty, uom: item.uom, text: item.text });
         });
 
         saveState();
-
         document.getElementById(`${type}-ref`).value = '';
         document.getElementById(`${type}-partner`).value = '';
-        document.getElementById(`${type}-header-note`).value = '';
         document.getElementById(`rows-migo-${type}`).innerHTML = '';
         addMigoRow(type);
 
-        showStatus(`Material Document [${nextDocNum}] posted successfully (${itemsToPost.length} items)`, 'S');
         alert(`Dokumen Material [${nextDocNum}] BERHASIL diposting!`);
-
         switchTab('mmbe');
     }
 
-    // DASHBOARD CALCULATIONS
     function renderDashboard() {
         const stockMap = calculateCurrentStockMapTotal();
-        const buyers = {};
-        const alerts = [];
+        const buyers = {}, alerts = [];
         materials.forEach(mat => {
-            const buyer = (mat.buyer || 'Tanpa Buyer').trim() || 'Tanpa Buyer';
+            const buyer = (mat.buyer || 'Tanpa Buyer').trim();
             buyers[buyer] = (buyers[buyer] || 0) + 1;
             const stock = Number(stockMap[mat.code] || 0);
             const reorder = Number(mat.reorder || 0);
             if (stock <= reorder) alerts.push({mat, stock, reorder});
         });
-        const safeCount = materials.length - alerts.length;
+
         document.getElementById('dash-total-material').textContent = materials.length.toLocaleString('id-ID');
         document.getElementById('dash-total-buyer').textContent = Object.keys(buyers).length.toLocaleString('id-ID');
         document.getElementById('dash-reorder-count').textContent = alerts.length.toLocaleString('id-ID');
-        document.getElementById('dash-safe-count').textContent = safeCount.toLocaleString('id-ID');
+        document.getElementById('dash-safe-count').textContent = (materials.length - alerts.length).toLocaleString('id-ID');
 
         const chart = document.getElementById('dashboard-buyer-chart');
-        const buyerEntries = Object.entries(buyers).sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-        if (!buyerEntries.length) chart.innerHTML = '<div style="color:#666">Belum ada data material.</div>';
+        const buyerEntries = Object.entries(buyers).sort((a,b) => b[1] - a[1]);
+        if (!buyerEntries.length) chart.innerHTML = '<div style="color:#666">Belum ada data.</div>';
         else {
             chart.innerHTML = buyerEntries.map(([buyer, count]) => {
                 const pct = materials.length ? count / materials.length * 100 : 0;
-                const safeBuyer = String(buyer).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-                return `<div class="buyer-bar-row"><div title="${safeBuyer}">${safeBuyer}</div><div class="buyer-bar-track"><div class="buyer-bar-fill" style="width:${pct.toFixed(2)}%"></div></div><div class="buyer-bar-value">${pct.toLocaleString('id-ID',{maximumFractionDigits:1})}% <span style="color:#666">(${count})</span></div></div>`;
+                return `<div class="buyer-bar-row"><div>${buyer}</div><div class="buyer-bar-track"><div class="buyer-bar-fill" style="width:${pct.toFixed(1)}%"></div></div><div class="buyer-bar-value">${pct.toFixed(0)}% (${count})</div></div>`;
             }).join('');
         }
-        const tbody = document.getElementById('dashboard-reorder-body');
-        alerts.sort((a,b) => (a.stock-a.reorder) - (b.stock-b.reorder));
-        if (!alerts.length) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#087a08;font-weight:bold;">Tidak ada material yang perlu reorder.</td></tr>';
-        else tbody.innerHTML = alerts.map(({mat,stock,reorder}) => `<tr><td><strong>${escapeDashboardHtml(mat.code)}</strong></td><td>${escapeDashboardHtml(mat.desc)}</td><td>${escapeDashboardHtml(mat.buyer || '-')}</td><td style="text-align:right;color:${stock < 0 ? '#b00000' : '#000'};font-weight:bold;">${stock.toLocaleString('id-ID')} ${escapeDashboardHtml(mat.uom || '')}</td><td style="text-align:right;">${reorder.toLocaleString('id-ID')}</td><td class="dash-alert">Reorder Alert</td></tr>`).join('');
-    }
 
-    function escapeDashboardHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const tbody = document.getElementById('dashboard-reorder-body');
+        if (!alerts.length) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#087a08;font-weight:bold;">Semua stok aman.</td></tr>';
+        else tbody.innerHTML = alerts.map(({mat,stock,reorder}) => `<tr><td><strong>${mat.code}</strong></td><td>${mat.desc}</td><td>${mat.buyer}</td><td style="text-align:right;font-weight:bold;color:#b00000;">${stock} ${mat.uom}</td><td style="text-align:right;">${reorder}</td><td class="dash-alert">Reorder Alert</td></tr>`).join('');
     }
 
     function calculateCurrentStockMapBySLoc() {
@@ -1719,7 +1518,6 @@
         return map;
     }
 
-    // STOK BARANG (MMBE) — TERURUT KODE MATERIAL
     function renderStockTable() {
         const search = document.getElementById('stock-search').value.toLowerCase();
         const buyerFilter = document.getElementById('stock-buyer-filter').value.toLowerCase();
@@ -1728,38 +1526,25 @@
 
         const stockBySLoc = calculateCurrentStockMapBySLoc();
         const totalStockMap = calculateCurrentStockMapTotal();
-
         const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
 
         sortedMaterials.forEach(mat => {
             if (buyerFilter && !mat.buyer.toLowerCase().includes(buyerFilter)) return;
-
-            let rakDetails = [];
-            let searchableSlocStr = '';
+            let rakDetails = [], searchableSlocStr = '';
             
             Object.keys(stockBySLoc).forEach(key => {
                 const [mCode, slocName] = key.split('__');
-                if (mCode === mat.code) {
-                    const qtyInRak = stockBySLoc[key];
-                    if (qtyInRak !== 0) {
-                        rakDetails.push(`<b>${slocName}</b>: ${qtyInRak.toLocaleString('id-ID')} ${mat.uom}`);
-                        searchableSlocStr += ` ${slocName}`;
-                    }
+                if (mCode === mat.code && stockBySLoc[key] !== 0) {
+                    rakDetails.push(`<b>${slocName}</b>: ${stockBySLoc[key]} ${mat.uom}`);
+                    searchableSlocStr += ` ${slocName}`;
                 }
             });
 
-            if (search && 
-                !mat.code.toLowerCase().includes(search) && 
-                !mat.desc.toLowerCase().includes(search) && 
-                !mat.buyer.toLowerCase().includes(search) && 
-                !searchableSlocStr.toLowerCase().includes(search)) return;
+            if (search && !mat.code.toLowerCase().includes(search) && !mat.desc.toLowerCase().includes(search) && !mat.buyer.toLowerCase().includes(search) && !searchableSlocStr.toLowerCase().includes(search)) return;
 
             const totalStock = totalStockMap[mat.code] || 0;
             const isLow = totalStock <= (mat.reorder || 0);
-            const statusTag = isLow 
-                ? `<span style="color:#cc0000; font-weight:bold;">⚠️ Reorder Alert</span>`
-                : `<span style="color:#087a08;">✅ Safe Stock</span>`;
-
+            const statusTag = isLow ? `<span style="color:#cc0000;font-weight:bold;">⚠️ Reorder Alert</span>` : `<span style="color:#087a08;">✅ Safe Stock</span>`;
             const slocDisplay = rakDetails.length > 0 ? rakDetails.join(' | ') : '<span style="color:#888;">Belum ada penempatan rak</span>';
 
             const tr = document.createElement('tr');
@@ -1768,20 +1553,17 @@
                 <td>${mat.buyer}</td>
                 <td>${mat.desc}</td>
                 <td>${mat.uom}</td>
-                <td style="text-align: right; font-weight: bold; font-size: 12px; color: ${totalStock < 0 ? '#cc0000' : '#000'}">${totalStock.toLocaleString('id-ID')}</td>
+                <td style="text-align: right; font-weight: bold; color: ${totalStock < 0 ? '#cc0000' : '#000'}">${totalStock.toLocaleString('id-ID')}</td>
                 <td>${slocDisplay}</td>
                 <td style="text-align: right;">${mat.reorder || 0}</td>
                 <td>${statusTag}</td>
-                <td>
-                    <button class="sap-btn" onclick="openLedgerModal('${mat.code}')">📋 Kartu Stok</button>
-                </td>
+                <td><button class="sap-btn" onclick="openLedgerModal('${mat.code}')">📋 Kartu Stok</button></td>
             `;
             tbody.appendChild(tr);
         });
         if (document.getElementById('dashboard-buyer-chart')) renderDashboard();
     }
 
-    // REKAP MATERIAL BERDASARKAN STYLE (ZSTYLE)
     function renderRekapStyleTable() {
         const selectElem = document.getElementById('rekap-style-select');
         const selectedStyleFilter = selectElem ? selectElem.value : 'ALL';
@@ -1790,61 +1572,32 @@
         tbody.innerHTML = '';
 
         const uniqueStyles = new Set();
-        mutasiLog.forEach(log => {
-            if (log.mvt === '201' && log.style && log.style !== '-') {
-                uniqueStyles.add(log.style);
-            }
-        });
+        mutasiLog.forEach(log => { if (log.mvt === '201' && log.style && log.style !== '-') uniqueStyles.add(log.style); });
 
         if (selectElem) {
             let currentVal = selectElem.value;
             selectElem.innerHTML = `<option value="ALL">-- Semua Style --</option>`;
-            uniqueStyles.forEach(st => {
-                selectElem.innerHTML += `<option value="${st}">${st}</option>`;
-            });
+            uniqueStyles.forEach(st => { selectElem.innerHTML += `<option value="${st}">${st}</option>`; });
             selectElem.value = currentVal || 'ALL';
         }
 
         const rekapMap = {};
-
         mutasiLog.forEach(log => {
             if (log.mvt === '201' && log.style && log.style !== '-') {
                 const key = `${log.style}__${log.code}`;
                 if (!rekapMap[key]) {
                     const matObj = materials.find(m => m.code === log.code) || {};
-                    rekapMap[key] = {
-                        style: log.style,
-                        code: log.code,
-                        desc: log.desc,
-                        buyer: matObj.buyer || '-',
-                        totalQty: 0,
-                        uom: log.uom,
-                        txCount: 0,
-                        lastDate: log.date
-                    };
+                    rekapMap[key] = { style: log.style, code: log.code, desc: log.desc, buyer: matObj.buyer || '-', totalQty: 0, uom: log.uom, txCount: 0, lastDate: log.date };
                 }
                 rekapMap[key].totalQty += parseFloat(log.qty);
                 rekapMap[key].txCount += 1;
-                if (new Date(log.date) > new Date(rekapMap[key].lastDate)) {
-                    rekapMap[key].lastDate = log.date;
-                }
+                if (new Date(log.date) > new Date(rekapMap[key].lastDate)) rekapMap[key].lastDate = log.date;
             }
         });
 
         let rowsArr = Object.values(rekapMap);
-
-        if (selectedStyleFilter !== 'ALL') {
-            rowsArr = rowsArr.filter(r => r.style === selectedStyleFilter);
-        }
-
-        if (searchKw) {
-            rowsArr = rowsArr.filter(r => 
-                r.style.toLowerCase().includes(searchKw) ||
-                r.code.toLowerCase().includes(searchKw) ||
-                r.desc.toLowerCase().includes(searchKw) ||
-                r.buyer.toLowerCase().includes(searchKw)
-            );
-        }
+        if (selectedStyleFilter !== 'ALL') rowsArr = rowsArr.filter(r => r.style === selectedStyleFilter);
+        if (searchKw) rowsArr = rowsArr.filter(r => r.style.toLowerCase().includes(searchKw) || r.code.toLowerCase().includes(searchKw) || r.desc.toLowerCase().includes(searchKw));
 
         rowsArr.forEach(row => {
             const tr = document.createElement('tr');
@@ -1860,18 +1613,13 @@
             `;
             tbody.appendChild(tr);
         });
-
-        if (rowsArr.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:12px;">Belum ada data pengeluaran material (MIGO-GI) dengan Style yang sesuai.</td></tr>`;
-        }
+        if (!rowsArr.length) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:10px;">Belum ada data style.</td></tr>`;
     }
 
-    // KARTU STOK LEDGER POPUP
     function openLedgerModal(materialCode) {
         currentLedgerCode = materialCode;
         const mat = materials.find(m => m.code === materialCode);
         if (!mat) return;
-
         const totalStockMap = calculateCurrentStockMapTotal();
 
         document.getElementById('ledger-mat-code').innerText = mat.code;
@@ -1880,25 +1628,16 @@
         document.getElementById('ledger-mat-uom').innerText = mat.uom;
         document.getElementById('ledger-mat-stock').innerText = `${(totalStockMap[mat.code] || 0).toLocaleString('id-ID')} ${mat.uom}`;
 
-        document.getElementById('ledger-start-date').value = '';
-        document.getElementById('ledger-end-date').value = '';
-
         renderLedgerRows(materialCode);
         document.getElementById('modal-ledger').style.display = 'flex';
     }
 
-    function closeLedgerModal() {
-        document.getElementById('modal-ledger').style.display = 'none';
-    }
+    function closeLedgerModal() { document.getElementById('modal-ledger').style.display = 'none'; }
 
     function renderLedgerRows(materialCode, startDate = null, endDate = null) {
         const tbody = document.getElementById('ledger-table-body');
         tbody.innerHTML = '';
-
-        let items = mutasiLog
-            .filter(m => m.code === materialCode)
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
-
+        let items = mutasiLog.filter(m => m.code === materialCode).sort((a, b) => new Date(a.date) - new Date(b.date));
         let runningBalance = 0;
 
         items.forEach(item => {
@@ -1917,34 +1656,23 @@
                 <td><strong>${item.sloc || '-'}</strong></td>
                 <td>${item.partner} (${item.ref})</td>
                 <td>${item.text || '-'}</td>
-                <td style="text-align: right; color: green;">${inQty > 0 ? inQty.toLocaleString('id-ID') : '-'}</td>
-                <td style="text-align: right; color: red;">${outQty > 0 ? outQty.toLocaleString('id-ID') : '-'}</td>
-                <td style="text-align: right; font-weight: bold; background:#f9f9f9;">${runningBalance.toLocaleString('id-ID')}</td>
+                <td style="text-align: right; color: green;">${inQty > 0 ? inQty : '-'}</td>
+                <td style="text-align: right; color: red;">${outQty > 0 ? outQty : '-'}</td>
+                <td style="text-align: right; font-weight: bold;">${runningBalance}</td>
             `;
             tbody.appendChild(tr);
         });
-
-        if (tbody.children.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:10px;">Tidak ada riwayat transaksi pada periode ini.</td></tr>`;
-        }
+        if (!tbody.children.length) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">Tidak ada riwayat.</td></tr>`;
     }
 
     function filterLedgerDate() {
-        const startDate = document.getElementById('ledger-start-date').value;
-        const endDate = document.getElementById('ledger-end-date').value;
-        if (currentLedgerCode) {
-            renderLedgerRows(currentLedgerCode, startDate, endDate);
-        }
+        renderLedgerRows(currentLedgerCode, document.getElementById('ledger-start-date').value, document.getElementById('ledger-end-date').value);
     }
 
     function exportLedgerCSV() {
         if (!currentLedgerCode) return;
-        let csv = "\uFEFFTanggal;No Dokumen;Style;SLoc;Partner/Ref;Keterangan;Masuk;Keluar;Saldo Akhir\n";
-        
-        let items = mutasiLog
-            .filter(m => m.code === currentLedgerCode)
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
-
+        let csv = "\uFEFFTanggal;No Dokumen;Style;SLoc;Partner/Ref;Keterangan;Masuk;Keluar;Saldo\n";
+        let items = mutasiLog.filter(m => m.code === currentLedgerCode).sort((a, b) => new Date(a.date) - new Date(b.date));
         let runningBalance = 0;
         items.forEach(item => {
             const inQty = (item.mvt === '101') ? parseFloat(item.qty) : 0;
@@ -1952,11 +1680,9 @@
             runningBalance += (inQty - outQty);
             csv += `"${item.date}";"${item.docNum}";"${item.style || '-'}";"${item.sloc || '-'}";"${item.partner} (${item.ref})";"${item.text || ''}";${inQty};${outQty};${runningBalance}\n`;
         });
-
         downloadCSV(csv, `Kartu_Stok_${currentLedgerCode}.csv`);
     }
 
-    // MUTASI BARANG (MB51) - EDIT & HAPUS
     function renderMutasiTable() {
         const search = document.getElementById('mb51-search').value.toLowerCase();
         const mvtFilter = document.getElementById('mb51-mvt-filter').value;
@@ -1965,18 +1691,13 @@
 
         mutasiLog.forEach((log, index) => {
             if (mvtFilter !== 'ALL' && log.mvt !== mvtFilter) return;
-            if (search && 
-                !log.docNum.toLowerCase().includes(search) && 
-                !log.code.toLowerCase().includes(search) && 
-                !log.desc.toLowerCase().includes(search) &&
-                !(log.sloc && log.sloc.toLowerCase().includes(search)) &&
-                !(log.style && log.style.toLowerCase().includes(search))) return;
+            if (search && !log.docNum.toLowerCase().includes(search) && !log.code.toLowerCase().includes(search) && !log.desc.toLowerCase().includes(search) && !(log.sloc && log.sloc.toLowerCase().includes(search))) return;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${log.date}</td>
                 <td><strong>${log.docNum}</strong></td>
-                <td style="text-align:center;"><span style="font-weight:bold; color:${log.mvt === '101' ? 'green' : 'red'};">${log.mvt === '101' ? 'Masuk' : 'Keluar'}</span></td>
+                <td style="text-align:center;"><span style="color:${log.mvt === '101' ? 'green' : 'red'};">${log.mvt === '101' ? 'Masuk' : 'Keluar'}</span></td>
                 <td>${log.code}</td>
                 <td>${log.desc}</td>
                 <td>${log.style || '-'}</td>
@@ -1998,7 +1719,6 @@
     function openEditMutasiModal(index) {
         const log = mutasiLog[index];
         if (!log) return;
-
         document.getElementById('edit-mutasi-index').value = index;
         document.getElementById('edit-mutasi-docnum').value = log.docNum;
         document.getElementById('edit-mutasi-date').value = log.date;
@@ -2011,42 +1731,24 @@
         document.getElementById('edit-mutasi-ref').value = log.ref || '';
         document.getElementById('edit-mutasi-qty').value = log.qty;
         document.getElementById('edit-mutasi-text').value = log.text || '';
-
-        document.getElementById('edit-mutasi-title').innerText = `Edit Dokumen Material - [${log.docNum}]`;
         document.getElementById('modal-edit-mutasi').style.display = 'flex';
     }
 
-    function closeEditMutasiModal() {
-        document.getElementById('modal-edit-mutasi').style.display = 'none';
-    }
+    function closeEditMutasiModal() { document.getElementById('modal-edit-mutasi').style.display = 'none'; }
 
     function saveEditMutasi(event) {
         event.preventDefault();
         const index = parseInt(document.getElementById('edit-mutasi-index').value);
-        if (isNaN(index) || index < 0 || index >= mutasiLog.length) return;
+        if (isNaN(index)) return;
 
-        const newDate = document.getElementById('edit-mutasi-date').value;
-        const newMvt = document.getElementById('edit-mutasi-mvt').value;
-        const newStyle = document.getElementById('edit-mutasi-style').value.trim() || '-';
-        const newSloc = document.getElementById('edit-mutasi-sloc').value.trim().toUpperCase() || '-';
-        const newPartner = document.getElementById('edit-mutasi-partner').value.trim() || '-';
-        const newRef = document.getElementById('edit-mutasi-ref').value.trim() || '-';
-        const newQty = parseFloat(document.getElementById('edit-mutasi-qty').value) || 0;
-        const newText = document.getElementById('edit-mutasi-text').value.trim();
-
-        if (newQty <= 0) {
-            alert('Jumlah (Qty) harus lebih besar dari 0!');
-            return;
-        }
-
-        mutasiLog[index].date = newDate;
-        mutasiLog[index].mvt = newMvt;
-        mutasiLog[index].style = newStyle;
-        mutasiLog[index].sloc = newSloc;
-        mutasiLog[index].partner = newPartner;
-        mutasiLog[index].ref = newRef;
-        mutasiLog[index].qty = newQty;
-        mutasiLog[index].text = newText;
+        mutasiLog[index].date = document.getElementById('edit-mutasi-date').value;
+        mutasiLog[index].mvt = document.getElementById('edit-mutasi-mvt').value;
+        mutasiLog[index].style = document.getElementById('edit-mutasi-style').value.trim() || '-';
+        mutasiLog[index].sloc = document.getElementById('edit-mutasi-sloc').value.trim().toUpperCase() || '-';
+        mutasiLog[index].partner = document.getElementById('edit-mutasi-partner').value.trim() || '-';
+        mutasiLog[index].ref = document.getElementById('edit-mutasi-ref').value.trim() || '-';
+        mutasiLog[index].qty = parseFloat(document.getElementById('edit-mutasi-qty').value) || 0;
+        mutasiLog[index].text = document.getElementById('edit-mutasi-text').value.trim();
 
         saveState();
         closeEditMutasiModal();
@@ -2054,58 +1756,33 @@
         renderStockTable();
         renderRekapStyleTable();
         renderFSNTable();
-
-        showStatus(`Dokumen Mutasi [${mutasiLog[index].docNum}] berhasil diperbarui`, 'S');
     }
 
     function deleteMutasiItem(index) {
-        const log = mutasiLog[index];
-        if (!log) return;
-
-        if (confirm(`Apakah Anda yakin ingin menghapus transaksi Dokumen [${log.docNum}] (${log.code} - Qty: ${log.qty})?`)) {
+        if (confirm(`Hapus transaksi dokumen mutasi ini?`)) {
             mutasiLog.splice(index, 1);
             saveState();
             renderMutasiTable();
             renderStockTable();
             renderRekapStyleTable();
             renderFSNTable();
-
-            showStatus(`Dokumen Mutasi [${log.docNum}] berhasil dihapus`, 'W');
         }
     }
 
-    // ANALISIS MOVEMENT (FSN)
     function renderFSNTable() {
         const filter = document.getElementById('fsn-filter').value;
         const tbody = document.getElementById('grid-fsn-body');
         tbody.innerHTML = '';
-
         const stockMap = calculateCurrentStockMapTotal();
 
         materials.forEach(mat => {
             const history = mutasiLog.filter(m => m.code === mat.code);
             const totalTx = history.length;
-            
-            const outVolume = history
-                .filter(m => m.mvt === '201')
-                .reduce((acc, curr) => acc + parseFloat(curr.qty), 0);
+            const outVolume = history.filter(m => m.mvt === '201').reduce((acc, curr) => acc + parseFloat(curr.qty), 0);
+            let lastDate = history.length ? history.map(h => new Date(h.date)).sort((a,b) => b - a)[0].toISOString().split('T')[0] : '-';
 
-            let lastDate = '-';
-            if (history.length > 0) {
-                const sortedDates = history.map(h => new Date(h.date)).sort((a,b) => b - a);
-                lastDate = sortedDates[0].toISOString().split('T')[0];
-            }
-
-            let fsnClass = 'NON';
-            let fsnBadge = `<span class="badge-fsn bg-non">No Moving</span>`;
-
-            if (totalTx >= 3 || outVolume >= 50) {
-                fsnClass = 'FAST';
-                fsnBadge = `<span class="badge-fsn bg-fast">Fast Moving</span>`;
-            } else if (totalTx > 0) {
-                fsnClass = 'SLOW';
-                fsnBadge = `<span class="badge-fsn bg-slow">Slow Moving</span>`;
-            }
+            let fsnClass = totalTx >= 3 || outVolume >= 50 ? 'FAST' : (totalTx > 0 ? 'SLOW' : 'NON');
+            let fsnBadge = fsnClass === 'FAST' ? `<span class="badge-fsn bg-fast">Fast</span>` : (fsnClass === 'SLOW' ? `<span class="badge-fsn bg-slow">Slow</span>` : `<span class="badge-fsn bg-non">Non</span>`);
 
             if (filter !== 'ALL' && fsnClass !== filter) return;
 
@@ -2116,7 +1793,7 @@
                 <td>${mat.buyer}</td>
                 <td style="text-align: right; font-weight: bold;">${(stockMap[mat.code] || 0).toLocaleString('id-ID')} ${mat.uom}</td>
                 <td style="text-align: right;">${totalTx}x</td>
-                <td style="text-align: right;">${outVolume.toLocaleString('id-ID')} ${mat.uom}</td>
+                <td style="text-align: right;">${outVolume.toLocaleString('id-ID')}</td>
                 <td>${lastDate}</td>
                 <td>${fsnBadge}</td>
             `;
@@ -2124,24 +1801,21 @@
         });
     }
 
-    // PURCHASE ORDER (ME21N / ME2N)
-    function savePOState() {
-        localStorage.setItem('sap_purchase_orders', JSON.stringify(purchaseOrders));
-    }
+    function savePOState() { localStorage.setItem('sap_purchase_orders', JSON.stringify(purchaseOrders)); }
 
     function addPORow(item = {}) {
         const tbody = document.getElementById('po-item-rows');
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="text-align:center;"></td>
-            <td><input class="po-code" list="global-material-list" value="${escapePOHtml(item.code || '')}" oninput="onPOCodeInput(this)" placeholder="Kode material"></td>
-            <td><input class="po-desc" readonly style="background:#eee;" value="${escapePOHtml(item.desc || '')}"></td>
-            <td><input class="po-buyer" readonly style="background:#eee;" value="${escapePOHtml(item.buyer || '')}"></td>
+            <td><input class="po-code" list="global-material-list" value="${item.code || ''}" oninput="onPOCodeInput(this)" placeholder="Kode"></td>
+            <td><input class="po-desc" readonly style="background:#eee;" value="${item.desc || ''}"></td>
+            <td><input class="po-buyer" readonly style="background:#eee;" value="${item.buyer || ''}"></td>
             <td><input class="po-qty" type="number" min="0.01" step="any" value="${item.qty ?? 0}" oninput="updatePOTotals()" style="text-align:right;"></td>
-            <td><input class="po-uom" readonly style="background:#eee;text-align:center;" value="${escapePOHtml(item.uom || '')}"></td>
+            <td><input class="po-uom" readonly style="background:#eee;text-align:center;" value="${item.uom || ''}"></td>
             <td><input class="po-price" type="number" min="0" step="any" value="${item.price ?? 0}" oninput="updatePOTotals()" style="text-align:right;"></td>
             <td class="po-line-total" style="text-align:right;font-weight:bold;">0</td>
-            <td><input class="po-item-note" value="${escapePOHtml(item.note || '')}" placeholder="Catatan"></td>
+            <td><input class="po-item-note" value="${item.note || ''}" placeholder="Catatan"></td>
             <td><button type="button" class="sap-btn sap-btn-red" onclick="this.closest('tr').remove();reindexPORows();updatePOTotals();">X</button></td>`;
         tbody.appendChild(tr);
         reindexPORows();
@@ -2149,20 +1823,14 @@
         updatePOTotals();
     }
 
-    function escapePOHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-    }
-
-    function reindexPORows() {
-        document.querySelectorAll('#po-item-rows tr').forEach((tr, i) => tr.cells[0].textContent = (i + 1) * 10);
-    }
+    function reindexPORows() { document.querySelectorAll('#po-item-rows tr').forEach((tr, i) => tr.cells[0].textContent = (i + 1) * 10); }
 
     function onPOCodeInput(input) {
         const code = input.value.trim().toUpperCase();
         const tr = input.closest('tr');
         const mat = materials.find(m => m.code.toUpperCase() === code);
         tr.querySelector('.po-desc').value = mat ? mat.desc : '';
-        tr.querySelector('.po-buyer').value = mat ? (mat.buyer || '') : '';
+        tr.querySelector('.po-buyer').value = mat ? mat.buyer : '';
         tr.querySelector('.po-uom').value = mat ? mat.uom : '';
         updatePOTotals();
     }
@@ -2184,11 +1852,8 @@
         document.getElementById('po-number-preview').value = '';
         document.getElementById('po-supplier').value = '';
         document.getElementById('po-note').value = '';
-        document.getElementById('po-date').value = new Date().toISOString().slice(0,10);
-        document.getElementById('po-delivery-date').value = '';
         document.getElementById('po-item-rows').innerHTML = '';
         addPORow();
-        document.getElementById('po-supplier').focus();
     }
 
     function savePurchaseOrder() {
@@ -2198,211 +1863,113 @@
         const deliveryDate = document.getElementById('po-delivery-date').value;
         const note = document.getElementById('po-note').value.trim();
         const rows = [...document.querySelectorAll('#po-item-rows tr')];
-        if (!poNo) { alert('Nomor PO wajib diisi manual.'); document.getElementById('po-number-preview').focus(); return; }
-        if (!supplier || !date) { alert('Supplier dan tanggal PO wajib diisi.'); return; }
-        if (!rows.length) { alert('Tambahkan minimal satu material.'); return; }
-        const items = [];
-        for (let i = 0; i < rows.length; i++) {
-            const tr = rows[i];
+
+        if (!poNo) { alert('Nomor PO wajib diisi.'); return; }
+        if (!supplier || !date) { alert('Supplier dan Tanggal PO wajib diisi.'); return; }
+        if (!rows.length) { alert('Tambahkan minimal 1 item.'); return; }
+
+        let items = [];
+        for (let tr of rows) {
             const code = tr.querySelector('.po-code').value.trim().toUpperCase();
             const mat = materials.find(m => m.code.toUpperCase() === code);
-            const qty = parseFloat(tr.querySelector('.po-qty').value) || 0;
-            const price = parseFloat(tr.querySelector('.po-price').value) || 0;
-            if (!mat) { alert(`Baris ${i+1}: pilih kode material yang terdaftar di Master Material.`); return; }
-            if (qty <= 0 || price < 0) { alert(`Baris ${i+1}: qty harus lebih dari 0 dan harga tidak boleh negatif.`); return; }
-            items.push({code:mat.code, desc:mat.desc, buyer:mat.buyer || '-', uom:mat.uom, qty, price, note:tr.querySelector('.po-item-note').value.trim()});
+            if (!mat) { alert('Kode material tidak valid!'); return; }
+            items.push({ code: mat.code, desc: mat.desc, buyer: mat.buyer || '-', uom: mat.uom, qty: parseFloat(tr.querySelector('.po-qty').value)||0, price: parseFloat(tr.querySelector('.po-price').value)||0, note: tr.querySelector('.po-item-note').value.trim() });
         }
-        let po;
-        if (poEditingId) {
-            po = purchaseOrders.find(p => p.id === poEditingId);
-            if (!po || po.status !== 'Draft') { alert('Hanya PO Draft yang bisa diedit.'); return; }
-            if (purchaseOrders.some(p => p.id !== poEditingId && String(p.number).trim().toLowerCase() === poNo.toLowerCase())) { alert('Nomor PO sudah digunakan.'); return; }
-            Object.assign(po, {number:poNo, supplier, date, deliveryDate, note, items});
-        } else {
-            if (purchaseOrders.some(p => String(p.number).trim().toLowerCase() === poNo.toLowerCase())) { alert('Nomor PO sudah digunakan.'); return; }
-            po = {id: `${Date.now()}-${Math.random().toString(36).slice(2,7)}`, number:poNo, supplier, date, deliveryDate, note, items, status:'Draft', createdAt:new Date().toISOString()};
-            purchaseOrders.unshift(po);
-        }
+
+        purchaseOrders.unshift({ id: `${Date.now()}`, number: poNo, supplier, date, deliveryDate, note, items, status: 'Draft' });
         savePOState();
-        document.getElementById('po-number-preview').value = po.number;
         renderPOTable();
-        showStatus(`Purchase Order ${po.number} berhasil disimpan sebagai Draft`, 'S');
-        alert(`PO ${po.number} berhasil disimpan sebagai Draft.`);
         resetPOForm();
+        alert(`PO [${poNo}] Berhasil Disimpan sebagai Draft!`);
     }
 
     function getPOProgress(po) {
-        const ordered = {};
-        const received = {};
-        po.items.forEach(item => ordered[item.code] = (ordered[item.code] || 0) + Number(item.qty || 0));
-        mutasiLog.forEach(log => {
-            if (log.mvt === '101' && log.ref === po.number) received[log.code] = (received[log.code] || 0) + Number(log.qty || 0);
-        });
-        const totalOrdered = Object.values(ordered).reduce((a,b)=>a+b,0);
-        const totalReceived = Object.values(received).reduce((a,b)=>a+b,0);
-        const totalRemaining = totalReceived - totalOrdered;
-        const totalValue = po.items.reduce((sum,item)=>sum + Number(item.qty || 0) * Number(item.price || 0),0);
-        let status = po.status || 'Draft';
-        if (status !== 'Draft' && status !== 'Cancelled' && status !== 'Menunggu Persetujuan') {
-            if (totalReceived >= totalOrdered && totalOrdered > 0) status = 'Completed';
-            else if (totalReceived > 0) status = 'Partial';
-            else status = 'Approved';
+        let ordered = {}, received = {};
+        po.items.forEach(i => ordered[i.code] = (ordered[i.code] || 0) + Number(i.qty));
+        mutasiLog.forEach(l => { if (l.mvt === '101' && l.ref === po.number) received[l.code] = (received[l.code] || 0) + Number(l.qty); });
+        const totOrd = Object.values(ordered).reduce((a,b)=>a+b,0);
+        const totRec = Object.values(received).reduce((a,b)=>a+b,0);
+        const totVal = po.items.reduce((sum,i)=>sum + Number(i.qty)*Number(i.price),0);
+        let status = po.status;
+        if (status !== 'Draft' && status !== 'Cancelled') {
+            status = totRec >= totOrd && totOrd > 0 ? 'Completed' : (totRec > 0 ? 'Partial' : 'Approved');
         }
-        return {totalOrdered,totalReceived,totalRemaining,totalValue,status};
+        return { totOrd, totRec, totVal, status };
     }
 
     function renderPOTable() {
         const tbody = document.getElementById('po-list-body');
         if (!tbody) return;
         tbody.innerHTML = '';
-        const search = (document.getElementById('po-search')?.value || '').toLowerCase();
-        const filter = document.getElementById('po-status-filter')?.value || 'ALL';
+        const search = document.getElementById('po-search').value.toLowerCase();
+        const filter = document.getElementById('po-status-filter').value;
+
         purchaseOrders.forEach(po => {
-            const progress = getPOProgress(po);
-            const haystack = [po.number,po.supplier,po.note,...po.items.map(i=>`${i.code} ${i.desc} ${i.buyer}`)].join(' ').toLowerCase();
-            if (search && !haystack.includes(search)) return;
-            if (filter !== 'ALL' && progress.status !== filter) return;
+            const p = getPOProgress(po);
+            if (search && !po.number.toLowerCase().includes(search) && !po.supplier.toLowerCase().includes(search)) return;
+            if (filter !== 'ALL' && p.status !== filter) return;
+
             const tr = document.createElement('tr');
-            const actions = [];
-            if (progress.status === 'Draft') actions.push(`<button class="sap-btn" onclick="editPurchaseOrder('${po.id}')">Edit</button>`, `<button class="sap-btn sap-btn-green" onclick="approvePurchaseOrder('${po.id}')">Ajukan/Approve</button>`, `<button class="sap-btn sap-btn-red" onclick="deletePurchaseOrder('${po.id}')">Hapus</button>`);
-            if (['Approved','Partial'].includes(progress.status)) actions.push(`<button class="sap-btn sap-btn-green" onclick="receivePurchaseOrder('${po.id}')">Terima</button>`);
-            if (progress.status !== 'Cancelled') actions.push(`<button class="sap-btn" onclick="printPurchaseOrder('${po.id}')">Cetak</button>`);
-            tr.innerHTML = `<td><strong>${escapePOHtml(po.number)}</strong></td><td>${escapePOHtml(po.date)}</td><td>${escapePOHtml(po.supplier)}</td><td>${escapePOHtml(po.deliveryDate || '-')}</td><td style="text-align:right">${po.items.length}</td><td style="text-align:right">${progress.totalValue.toLocaleString('id-ID')}</td><td style="text-align:right">${progress.totalOrdered.toLocaleString('id-ID')}</td><td style="text-align:right">${progress.totalReceived.toLocaleString('id-ID')}</td><td style="text-align:right">${progress.totalRemaining.toLocaleString('id-ID')}</td><td><strong>${escapePOHtml(progress.status)}</strong></td><td style="white-space:normal">${actions.join(' ')}</td>`;
+            tr.innerHTML = `
+                <td><strong>${po.number}</strong></td>
+                <td>${po.date}</td>
+                <td>${po.supplier}</td>
+                <td>${po.deliveryDate || '-'}</td>
+                <td style="text-align:right">${po.items.length}</td>
+                <td style="text-align:right">${p.totVal.toLocaleString('id-ID')}</td>
+                <td style="text-align:right">${p.totOrd}</td>
+                <td style="text-align:right">${p.totRec}</td>
+                <td style="text-align:right">${p.totRec - p.totOrd}</td>
+                <td><strong>${p.status}</strong></td>
+                <td>
+                    ${po.status === 'Draft' ? `<button class="sap-btn sap-btn-green" onclick="approvePO('${po.id}')">Approve</button>` : ''}
+                    ${['Approved','Partial'].includes(p.status) ? `<button class="sap-btn sap-btn-green" onclick="receivePO('${po.id}')">Terima</button>` : ''}
+                </td>
+            `;
             tbody.appendChild(tr);
         });
-        if (!tbody.children.length) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:12px;">Belum ada PO yang sesuai filter.</td></tr>';
+        if (!tbody.children.length) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">Tidak ada PO.</td></tr>`;
     }
 
-    function approvePurchaseOrder(id) {
+    function approvePO(id) {
         const po = purchaseOrders.find(p => p.id === id);
-        if (!po || po.status !== 'Draft') return;
-        if (!confirm(`Setujui Purchase Order ${po.number}?`)) return;
-        po.status = 'Approved';
-        savePOState(); renderPOTable();
-        showStatus(`PO ${po.number} disetujui.`, 'S');
+        if (po) { po.status = 'Approved'; savePOState(); renderPOTable(); }
     }
 
-    function editPurchaseOrder(id) {
-        const po = purchaseOrders.find(p => p.id === id);
-        if (!po || po.status !== 'Draft') { alert('Hanya PO Draft yang bisa diedit.'); return; }
-        poEditingId = id;
-        document.getElementById('po-number-preview').value = po.number;
-        document.getElementById('po-supplier').value = po.supplier;
-        document.getElementById('po-date').value = po.date;
-        document.getElementById('po-delivery-date').value = po.deliveryDate || '';
-        document.getElementById('po-note').value = po.note || '';
-        document.getElementById('po-item-rows').innerHTML = '';
-        po.items.forEach(item => addPORow(item));
-        switchTab('po');
-    }
-
-    function deletePurchaseOrder(id) {
-        const po = purchaseOrders.find(p => p.id === id);
-        if (!po || po.status !== 'Draft') return;
-        if (!confirm(`Hapus PO Draft ${po.number}?`)) return;
-        purchaseOrders = purchaseOrders.filter(p => p.id !== id);
-        savePOState(); renderPOTable();
-        showStatus(`PO ${po.number} dihapus.`, 'S');
-    }
-
-    function receivePurchaseOrder(id) {
+    function receivePO(id) {
         const po = purchaseOrders.find(p => p.id === id);
         if (!po) return;
         document.getElementById('gr-ref').value = po.number;
         document.getElementById('gr-partner').value = po.supplier;
         document.getElementById('rows-migo-gr').innerHTML = '';
         po.items.forEach(item => {
-            const already = mutasiLog.filter(m=>m.mvt==='101' && m.ref===po.number && m.code===item.code).reduce((sum,m)=>sum+Number(m.qty||0),0);
-            const remaining = Math.max(0, Number(item.qty) - already);
-            if (remaining > 0) {
-                addMigoRow('gr');
-                const tr = document.querySelector('#rows-migo-gr tr:last-child');
-                tr.querySelector('.migo-mat-input').value = item.code;
-                onMigoMaterialInput(tr.querySelector('.migo-mat-input'));
-                tr.querySelector('.migo-qty').value = remaining;
-            }
+            addMigoRow('gr');
+            const tr = document.querySelector('#rows-migo-gr tr:last-child');
+            tr.querySelector('.migo-mat-input').value = item.code;
+            onMigoMaterialInput(tr.querySelector('.migo-mat-input'));
+            tr.querySelector('.migo-qty').value = item.qty;
         });
-        if (!document.querySelector('#rows-migo-gr tr')) addMigoRow('gr');
         switchTab('migo-gr');
     }
 
-    function printPurchaseOrder(id) {
-        const po = purchaseOrders.find(p => p.id === id);
-        if (!po) return;
-        const progress = getPOProgress(po);
-        const rows = po.items.map((item,i)=>`<tr><td>${i+1}</td><td>${escapePOHtml(item.code)}</td><td>${escapePOHtml(item.desc)}</td><td>${escapePOHtml(item.buyer)}</td><td style="text-align:right">${Number(item.qty).toLocaleString('id-ID')}</td><td>${escapePOHtml(item.uom)}</td><td style="text-align:right">${Number(item.price).toLocaleString('id-ID')}</td><td style="text-align:right">${(Number(item.qty)*Number(item.price)).toLocaleString('id-ID')}</td></tr>`).join('');
-        const w = window.open('', '_blank');
-        if (!w) { alert('Pop-up diblokir browser.'); return; }
-        w.document.write(`<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>${escapePOHtml(po.number)}</title><style>body{font:12px Arial;padding:24px;color:#111}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #555;padding:7px}th{background:#eee}</style></head><body><h2>PURCHASE ORDER</h2><div><b>No. PO:</b> ${escapePOHtml(po.number)}<br><b>Supplier:</b> ${escapePOHtml(po.supplier)}</div><table><thead><tr><th>No</th><th>Kode</th><th>Deskripsi</th><th>Buyer</th><th>Qty</th><th>UoM</th><th>Harga Satuan</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><h3 style="text-align:right">Total PO: Rp ${progress.totalValue.toLocaleString('id-ID')}</h3><script>window.onload=()=>window.print();<\/script></body></html>`);
-        w.document.close();
-    }
-
-    // EXPORT CSV UTILITIES
     function exportCSV(type) {
-        let csv = '';
-        if (type === 'po') {
-            csv = "\uFEFFNo PO;Tanggal;Supplier;Rencana Datang;Status;Jumlah Item;Total PO;Qty PO;Qty Diterima;Blc;Material\n";
-            purchaseOrders.forEach(po => {
-                const p = getPOProgress(po);
-                const materialList = po.items.map(i => `${i.code} - ${i.desc}`).join('; ');
-                csv += `"${po.number}";"${po.date}";"${po.supplier}";"${po.deliveryDate || ''}";"${p.status}";${po.items.length};${p.totalValue};${p.totalOrdered};${p.totalReceived};${p.totalRemaining};"${materialList.replace(/"/g,'""')}"\n`;
-            });
-            downloadCSV(csv, 'Purchase_Order_Monitoring.csv');
-        } else if (type === 'stock') {
-            csv = "\uFEFFKode Material;Kode Buyer;Deskripsi Material;UoM;Stok;Sloc Info;Reorder Level;Status Stok\n";
+        let csv = '\uFEFF';
+        if (type === 'stock') {
+            csv += "Kode Material;Buyer;Deskripsi;UoM;Stok;SLoc Info;Reorder;Status\n";
             const stockBySLoc = calculateCurrentStockMapBySLoc();
             const totalStockMap = calculateCurrentStockMapTotal();
-            const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
-
-            sortedMaterials.forEach(m => {
-                let rakDetails = [];
-                Object.keys(stockBySLoc).forEach(key => {
-                    const [mCode, slocName] = key.split('__');
-                    if (mCode === m.code && stockBySLoc[key] !== 0) {
-                        rakDetails.push(`${slocName}: ${stockBySLoc[key]} ${m.uom}`);
-                    }
-                });
-                const rakStr = rakDetails.join(' | ');
-                const totalStk = totalStockMap[m.code] || 0;
-                const statusStr = totalStk <= (m.reorder || 0) ? "Reorder Alert" : "Safe Stock";
-                csv += `"${m.code}";"${m.buyer}";"${m.desc}";"${m.uom}";${totalStk};"${rakStr}";${m.reorder || 0};"${statusStr}"\n`;
-            });
-            downloadCSV(csv, 'Stock_Overview_MMBE.csv');
-        } else if (type === 'rekap-style') {
-            csv = "\uFEFFKode Style;Kode Material;Deskripsi;Buyer;Total Qty Issue;UoM;Frekuensi Transaksi;Tgl Terakhir Issue\n";
-            const rekapMap = {};
-            mutasiLog.forEach(log => {
-                if (log.mvt === '201' && log.style && log.style !== '-') {
-                    const key = `${log.style}__${log.code}`;
-                    if (!rekapMap[key]) {
-                        const matObj = materials.find(m => m.code === log.code) || {};
-                        rekapMap[key] = { style: log.style, code: log.code, desc: log.desc, buyer: matObj.buyer || '-', totalQty: 0, uom: log.uom, txCount: 0, lastDate: log.date };
-                    }
-                    rekapMap[key].totalQty += parseFloat(log.qty);
-                    rekapMap[key].txCount += 1;
-                    if (new Date(log.date) > new Date(rekapMap[key].lastDate)) rekapMap[key].lastDate = log.date;
-                }
-            });
-            Object.values(rekapMap).forEach(r => {
-                csv += `"${r.style}";"${r.code}";"${r.desc}";"${r.buyer}";${r.totalQty};"${r.uom}";${r.txCount};"${r.lastDate}"\n`;
-            });
-            downloadCSV(csv, 'Rekap_Material_Per_Style.csv');
-        } else if (type === 'mutasi') {
-            csv = "\uFEFFTanggal;No Dokumen;Jenis;Kode Material;Deskripsi;Style;SLoc;Partner;Reff;Qty;UoM;Item Text\n";
-            mutasiLog.forEach(m => {
-                csv += `"${m.date}";"${m.docNum}";"${m.mvt === '101' ? 'Masuk' : 'Keluar'}";"${m.code}";"${m.desc}";"${m.style || '-'}";"${m.sloc || '-'}";"${m.partner}";"${m.ref}";${m.qty};"${m.uom}";"${m.text || ''}"\n`;
-            });
-            downloadCSV(csv, 'Mutasi_Barang_MB51.csv');
-        } else if (type === 'fsn') {
-            csv = "\uFEFFKode Material;Deskripsi;Buyer;Total Stok;Total Transaksi;Volume Out;Tgl Terakhir;Status FSN\n";
-            const stockMap = calculateCurrentStockMapTotal();
             materials.forEach(m => {
-                const history = mutasiLog.filter(x => x.code === m.code);
-                const outVolume = history.filter(x => x.mvt === '201').reduce((acc, c) => acc + parseFloat(c.qty), 0);
-                let status = history.length >= 3 || outVolume >= 50 ? 'Fast Moving' : (history.length > 0 ? 'Slow Moving' : 'No Moving');
-                csv += `"${m.code}";"${m.desc}";"${m.buyer}";${stockMap[m.code] || 0};${history.length};${outVolume};"${history[0] ? history[0].date : '-'}";"${status}"\n`;
+                let rakDetails = [];
+                Object.keys(stockBySLoc).forEach(k => { const [mc, sl] = k.split('__'); if (mc === m.code && stockBySLoc[k] !== 0) rakDetails.push(`${sl}: ${stockBySLoc[k]}`); });
+                csv += `"${m.code}";"${m.buyer}";"${m.desc}";"${m.uom}";${totalStockMap[m.code]||0};"${rakDetails.join(' | ')}";${m.reorder};"${(totalStockMap[m.code]||0) <= m.reorder ? 'Alert' : 'Safe'}"\n`;
             });
-            downloadCSV(csv, 'Analisis_FSN_Report.csv');
+            downloadCSV(csv, 'Stock_Overview.csv');
+        } else if (type === 'mutasi') {
+            csv += "Tanggal;No Dokumen;Jenis;Kode;Deskripsi;Style;SLoc;Partner;Ref;Qty;UoM;Text\n";
+            mutasiLog.forEach(m => {
+                csv += `"${m.date}";"${m.docNum}";"${m.mvt}";"${m.code}";"${m.desc}";"${m.style}";"${m.sloc}";"${m.partner}";"${m.ref}";${m.qty};"${m.uom}";"${m.text}"\n`;
+            });
+            downloadCSV(csv, 'Mutasi_MB51.csv');
         }
     }
 
@@ -2411,9 +1978,7 @@
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.setAttribute('download', filename);
-        document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
     }
 </script>
 </body>
