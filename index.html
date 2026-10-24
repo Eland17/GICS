@@ -1634,20 +1634,7 @@
         const rows=getFilteredOpnameHistory(); if(!rows.length){alert('Tidak ada data untuk dicetak.');return;}
         const body=rows.map(r=>`<tr><td>${r.date}</td><td>${r.sloc}</td><td>${r.code}</td><td>${r.desc}</td><td>${r.buyer}</td><td>${r.uom}</td><td>${r.bookQty}</td><td>${r.countedQty}</td><td>${r.variance}</td><td>${r.status}</td><td>${r.user}</td></tr>`).join('');
         const w=window.open('','_blank'); if(!w){alert('Izinkan pop-up browser untuk mencetak laporan.');return;}
-        w.document.write(`<html><head><title>Report Hasil Stok Opname</title><style>body{font:12px Arial;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}</style></head><body><h2>REPORT HASIL STOK OPNAME</h2><table><thead><tr><th>Tanggal</th><th>Rak</th><th>Kode</th><th>Deskripsi</th><th>Buyer</th><th>UoM</th><th>Stok Sistem</th><th>Fisik</th><th>Selisih</th><th>Status</th><th>Petugas</th></tr></thead><tbody>${body}</tbody></table><!--
-PENTING SETUP FIREBASE:
-1. Firebase Console > Authentication > Sign-in method: aktifkan Anonymous.
-2. Firestore Database: buat database jika belum ada.
-3. Rules harus mengizinkan akses hanya kepada pengguna yang terautentikasi. Contoh awal di bawah ini tetap mengizinkan semua sesi anonymous, jadi untuk produksi sebaiknya tambahkan allowlist UID.
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /{document=**} { allow read, write: if request.auth != null; }
-     }
-   }
-4. Migrasi otomatis hanya berjalan sekali berdasarkan dokumen inventoryAppMeta/migration_v1. Backup data browser sebelum pertama kali menjalankan.
--->
-</body></html>`);
+        w.document.write(`<html><head><title>Report Hasil Stok Opname</title><style>body{font:12px Arial;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}</style></head><body><h2>REPORT HASIL STOK OPNAME</h2><table><thead><tr><th>Tanggal</th><th>Rak</th><th>Kode</th><th>Deskripsi</th><th>Buyer</th><th>UoM</th><th>Stok Sistem</th><th>Fisik</th><th>Selisih</th><th>Status</th><th>Petugas</th></tr></thead><tbody>${body}</tbody></table></body></html>`);
         w.document.close();w.focus();w.print();
     }
 
@@ -2332,6 +2319,7 @@ PENTING SETUP FIREBASE:
                 <td>
                     ${po.status === 'Draft' ? `<button class="sap-btn sap-btn-green" onclick="approvePO('${po.id}')">Approve</button>` : ''}
                     ${['Approved','Partial'].includes(p.status) ? `<button class="sap-btn sap-btn-green" onclick="receivePO('${po.id}')">Terima</button>` : ''}
+                    <button class="sap-btn sap-btn-red" onclick="deletePO('${po.id}')">🗑️ Hapus</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -2342,6 +2330,17 @@ PENTING SETUP FIREBASE:
     function approvePO(id) {
         const po = purchaseOrders.find(p => p.id === id);
         if (po) { po.status = 'Approved'; savePOState(); renderPOTable(); }
+    }
+
+    function deletePO(id) {
+        const po = purchaseOrders.find(p => p.id === id);
+        if (!po) return;
+        if (confirm(`Apakah Anda yakin ingin menghapus PO [${po.number}]?`)) {
+            purchaseOrders = purchaseOrders.filter(p => p.id !== id);
+            savePOState();
+            renderPOTable();
+            showStatus(`PO [${po.number}] berhasil dihapus`, 'S');
+        }
     }
 
     function receivePO(id) {
@@ -2396,18 +2395,5 @@ PENTING SETUP FIREBASE:
         link.click();
     }
 </script>
-<!--
-PENTING SETUP FIREBASE:
-1. Firebase Console > Authentication > Sign-in method: aktifkan Anonymous.
-2. Firestore Database: buat database jika belum ada.
-3. Rules harus mengizinkan akses hanya kepada pengguna yang terautentikasi. Contoh awal di bawah ini tetap mengizinkan semua sesi anonymous, jadi untuk produksi sebaiknya tambahkan allowlist UID.
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /{document=**} { allow read, write: if request.auth != null; }
-     }
-   }
-4. Migrasi otomatis hanya berjalan sekali berdasarkan dokumen inventoryAppMeta/migration_v1. Backup data browser sebelum pertama kali menjalankan.
--->
 </body>
 </html>
