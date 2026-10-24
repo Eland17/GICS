@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SAP R/3 Enterprise - Garment Inventory Control System</title>
+    <!-- Firebase compat SDK: Auth + Cloud Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <!-- HTML5 QR Code Scanner Library -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <!-- JsBarcode Library for Printing Barcode Labels -->
@@ -1160,38 +1164,144 @@
         { docNum: "7000000001", date: "2026-10-15", mvt: "701", code: "MAT-1001", desc: "Kain Katun Combed 30S", style: "-", sloc: "RAK-A1", partner: "Auditor Gudang", ref: "PHYS-OPNAME-RAK-A1", qty: 5, uom: "KG", text: "Opname Adjustment: Surplus +5 KG" }
     ];
 
+    // Firebase configuration provided by the owner of this project.
+    const firebaseConfig = {
+        apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
+        authDomain: "inventory-gudang-16dfe.firebaseapp.com",
+        projectId: "inventory-gudang-16dfe",
+        storageBucket: "inventory-gudang-16dfe.appspot.com",
+        messagingSenderId: "663364522026",
+        appId: "1:663364522026:web:f48fb1ba0331695de83353"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
     let materials = JSON.parse(localStorage.getItem('sap_materials')) || DEFAULT_MATERIALS;
     let mutasiLog = JSON.parse(localStorage.getItem('sap_mutasi')) || DEFAULT_MUTASI;
     let currentLedgerCode = null;
     let purchaseOrders = JSON.parse(localStorage.getItem('sap_purchase_orders') || '[]');
     let poEditingId = null;
     let opnameHistory = JSON.parse(localStorage.getItem('sap_opname_history') || '[]');
-
     let html5QrcodeScanner = null;
     let activeScannerTarget = null;
+    let cloudReady = false;
+    let cloudSaveQueue = Promise.resolve();
 
-    window.addEventListener('DOMContentLoaded', () => {
+    const CLOUD_COLLECTIONS = {
+        materials: 'ig_materials',
+        mutasi: 'ig_mutasi',
+        purchaseOrders: 'ig_purchaseOrders',
+        opnameHistory: 'ig_opnameHistory'
+    };
+
+    // Simpan array per dokumen agar tidak menumpuk seluruh riwayat dalam satu dokumen Firestore.
+    async function replaceCloudCollection(collectionName, rows, idField) {
+        const ref = db.collection(collectionName);
+        const oldDocs = await ref.get();
+        let batch = db.batch(), count = 0;
+        for (const doc of oldDocs.docs) {
+            batch.delete(doc.ref); count++;
+            if (count >= 400) { await batch.commit(); batch = db.batch(); count = 0; }
+        }
+        if (count) await batch.commit();
+        for (let i = 0; i < rows.length; i += 400) {
+            batch = db.batch();
+            rows.slice(i, i + 400).forEach((row, offset) => {
+                const index = i + offset;
+                const safeRow = JSON.parse(JSON.stringify(row));
+                const docId = String(safeRow[idField] ?? `${index}`).replaceAll('/', '_').slice(0, 120) || String(index);
+                // Prefix index preserves the current list order when loading again.
+                batch.set(ref.doc(`${String(index).padStart(8, '0')}_${docId}`), { ...safeRow, _order: index });
+            });
+            await batch.commit();
+        }
+    }
+
+    async function readCloudCollection(collectionName) {
+        const snap = await db.collection(collectionName).get();
+        return snap.docs.map(d => d.data()).sort((a, b) => (a._order ?? 0) - (b._order ?? 0)).map(({_order, ...row}) => row);
+    }
+
+    async function saveAllToCloud() {
+        if (!cloudReady) return;
+        cloudSaveQueue = cloudSaveQueue.then(async () => {
+            await replaceCloudCollection(CLOUD_COLLECTIONS.materials, materials, 'code');
+            await replaceCloudCollection(CLOUD_COLLECTIONS.mutasi, mutasiLog, 'id');
+            await replaceCloudCollection(CLOUD_COLLECTIONS.purchaseOrders, purchaseOrders, 'id');
+            await replaceCloudCollection(CLOUD_COLLECTIONS.opnameHistory, opnameHistory, 'id');
+            showStatus('Data tersimpan dan tersinkron ke Firebase', 'S');
+        }).catch(err => {
+            console.error('Firebase save error:', err);
+            showStatus('Gagal menyimpan ke Firebase: ' + (err.message || err.code || 'periksa Rules/koneksi'), 'E');
+        });
+        return cloudSaveQueue;
+    }
+
+    async function loadCloudOrMigrateLocal() {
+        const metaRef = db.collection('inventoryAppMeta').doc('migration_v1');
+        const meta = await metaRef.get();
+        if (meta.exists && meta.data().completed === true) {
+            const [cloudMaterials, cloudMutasi, cloudPO, cloudOpname] = await Promise.all([
+                readCloudCollection(CLOUD_COLLECTIONS.materials), readCloudCollection(CLOUD_COLLECTIONS.mutasi),
+                readCloudCollection(CLOUD_COLLECTIONS.purchaseOrders), readCloudCollection(CLOUD_COLLECTIONS.opnameHistory)
+            ]);
+            materials = cloudMaterials.length ? cloudMaterials : [];
+            mutasiLog = cloudMutasi;
+            purchaseOrders = cloudPO;
+            opnameHistory = cloudOpname;
+        } else {
+            // First run: preserve existing browser data. If there is none, use the HTML's sample defaults.
+            const hasLocalData = ['sap_materials','sap_mutasi','sap_purchase_orders','sap_opname_history']
+                .some(key => localStorage.getItem(key) !== null);
+            if (!hasLocalData) {
+                materials = DEFAULT_MATERIALS.slice();
+                mutasiLog = DEFAULT_MUTASI.slice();
+                purchaseOrders = [];
+                opnameHistory = [];
+            }
+            await replaceCloudCollection(CLOUD_COLLECTIONS.materials, materials, 'code');
+            await replaceCloudCollection(CLOUD_COLLECTIONS.mutasi, mutasiLog, 'id');
+            await replaceCloudCollection(CLOUD_COLLECTIONS.purchaseOrders, purchaseOrders, 'id');
+            await replaceCloudCollection(CLOUD_COLLECTIONS.opnameHistory, opnameHistory, 'id');
+            await metaRef.set({ completed: true, migratedAt: firebase.firestore.FieldValue.serverTimestamp(), version: 1 });
+        }
+        localStorage.setItem('sap_materials', JSON.stringify(materials));
+        localStorage.setItem('sap_mutasi', JSON.stringify(mutasiLog));
+        localStorage.setItem('sap_purchase_orders', JSON.stringify(purchaseOrders));
+        localStorage.setItem('sap_opname_history', JSON.stringify(opnameHistory));
+        cloudReady = true;
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            // Anonymous auth must be enabled in Firebase Console > Authentication > Sign-in method.
+            await auth.signInAnonymously();
+            await loadCloudOrMigrateLocal();
+            showStatus('Terhubung ke Firebase: inventory-gudang-16dfe', 'S');
+        } catch (err) {
+            console.error('Firebase init/load error:', err);
+            showStatus('Firebase belum terhubung. Periksa Anonymous Auth dan Firestore Rules.', 'E');
+            alert('Tidak dapat memuat data Firebase. Periksa koneksi internet, aktifkan Anonymous Authentication, dan pasang Firestore Rules yang sesuai. Detail: ' + (err.message || err.code || err));
+        }
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('gr-date').value = today;
         document.getElementById('gi-date').value = today;
         document.getElementById('po-date').value = today;
         document.getElementById('po-delivery-date').value = today;
         document.getElementById('opname-date').value = today;
-
         updateGlobalDatalist();
         addPORow();
         renderPOTable();
-
         addMigoRow('gr');
         addMigoRow('gi');
-
         renderMasterTable();
         renderStockTable();
         renderMutasiTable();
         renderFSNTable();
         renderRekapStyleTable();
         renderDashboard();
-
+        if (typeof renderOpnameReport === 'function') renderOpnameReport();
         document.getElementById('tcode-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') executeTCode();
         });
@@ -1202,6 +1312,7 @@
         localStorage.setItem('sap_mutasi', JSON.stringify(mutasiLog));
         updateGlobalDatalist();
         if (document.getElementById('dashboard-buyer-chart')) renderDashboard();
+        saveAllToCloud();
     }
 
     function updateGlobalDatalist() {
@@ -1522,7 +1633,20 @@
         const rows=getFilteredOpnameHistory(); if(!rows.length){alert('Tidak ada data untuk dicetak.');return;}
         const body=rows.map(r=>`<tr><td>${r.date}</td><td>${r.sloc}</td><td>${r.code}</td><td>${r.desc}</td><td>${r.buyer}</td><td>${r.uom}</td><td>${r.bookQty}</td><td>${r.countedQty}</td><td>${r.variance}</td><td>${r.status}</td><td>${r.user}</td></tr>`).join('');
         const w=window.open('','_blank'); if(!w){alert('Izinkan pop-up browser untuk mencetak laporan.');return;}
-        w.document.write(`<html><head><title>Report Hasil Stok Opname</title><style>body{font:12px Arial;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}</style></head><body><h2>REPORT HASIL STOK OPNAME</h2><table><thead><tr><th>Tanggal</th><th>Rak</th><th>Kode</th><th>Deskripsi</th><th>Buyer</th><th>UoM</th><th>Stok Sistem</th><th>Fisik</th><th>Selisih</th><th>Status</th><th>Petugas</th></tr></thead><tbody>${body}</tbody></table></body></html>`);
+        w.document.write(`<html><head><title>Report Hasil Stok Opname</title><style>body{font:12px Arial;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}</style></head><body><h2>REPORT HASIL STOK OPNAME</h2><table><thead><tr><th>Tanggal</th><th>Rak</th><th>Kode</th><th>Deskripsi</th><th>Buyer</th><th>UoM</th><th>Stok Sistem</th><th>Fisik</th><th>Selisih</th><th>Status</th><th>Petugas</th></tr></thead><tbody>${body}</tbody></table><!--
+PENTING SETUP FIREBASE:
+1. Firebase Console > Authentication > Sign-in method: aktifkan Anonymous.
+2. Firestore Database: buat database jika belum ada.
+3. Rules harus mengizinkan akses hanya kepada pengguna yang terautentikasi. Contoh awal di bawah ini tetap mengizinkan semua sesi anonymous, jadi untuk produksi sebaiknya tambahkan allowlist UID.
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /{document=**} { allow read, write: if request.auth != null; }
+     }
+   }
+4. Migrasi otomatis hanya berjalan sekali berdasarkan dokumen inventoryAppMeta/migration_v1. Backup data browser sebelum pertama kali menjalankan.
+-->
+</body></html>`);
         w.document.close();w.focus();w.print();
     }
 
@@ -2084,7 +2208,7 @@
         });
     }
 
-    function savePOState() { localStorage.setItem('sap_purchase_orders', JSON.stringify(purchaseOrders)); }
+    function savePOState() { localStorage.setItem('sap_purchase_orders', JSON.stringify(purchaseOrders)); saveAllToCloud(); }
 
     function addPORow(item = {}) {
         const tbody = document.getElementById('po-item-rows');
@@ -2271,5 +2395,18 @@
         link.click();
     }
 </script>
+<!--
+PENTING SETUP FIREBASE:
+1. Firebase Console > Authentication > Sign-in method: aktifkan Anonymous.
+2. Firestore Database: buat database jika belum ada.
+3. Rules harus mengizinkan akses hanya kepada pengguna yang terautentikasi. Contoh awal di bawah ini tetap mengizinkan semua sesi anonymous, jadi untuk produksi sebaiknya tambahkan allowlist UID.
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /{document=**} { allow read, write: if request.auth != null; }
+     }
+   }
+4. Migrasi otomatis hanya berjalan sekali berdasarkan dokumen inventoryAppMeta/migration_v1. Backup data browser sebelum pertama kali menjalankan.
+-->
 </body>
 </html>
