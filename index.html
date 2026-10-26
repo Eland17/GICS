@@ -260,13 +260,12 @@
             font-weight: bold;
         }
 
-        /* Data Table Grid */
+        /* Data Table Grid (Tanpa Scroll Vertikal, Diatur Penuh oleh Pagination) */
         .sap-grid-container {
-            overflow: auto;
+            overflow: visible;
             border: 1px solid var(--sap-border-mid);
             background: #fff;
-            max-height: 400px;
-            -webkit-overflow-scrolling: touch;
+            max-height: none;
         }
 
         .sap-grid {
@@ -280,9 +279,7 @@
             padding: 4px;
             text-align: left;
             font-weight: bold;
-            position: sticky;
-            top: 0;
-            z-index: 2;
+            position: static;
         }
 
         .sap-grid td {
@@ -552,7 +549,7 @@
                     <button type="button" class="sap-btn sap-btn-green" onclick="savePurchaseOrder()">💾 Simpan PO (Draft)</button>
                     <button type="button" class="sap-btn" onclick="resetPOForm()">🔄 Reset</button>
                 </div>
-                <div class="sap-grid-container" style="max-height:260px;">
+                <div class="sap-grid-container" style="max-height:260px; overflow:auto;">
                     <table class="sap-grid">
                         <thead><tr>
                             <th style="width:35px;">Item</th><th>Kode Material</th><th>Deskripsi</th>
@@ -583,7 +580,7 @@
                         <button class="sap-btn" onclick="exportCSV('po')">📥 Export CSV PO</button>
                     </div>
                 </div>
-                <div class="sap-grid-container">
+                <div class="sap-grid-container" style="max-height:300px; overflow:auto;">
                     <table class="sap-grid">
                         <thead><tr><th>No. PO</th><th>Tgl PO</th><th>Supplier</th><th>Rencana Datang</th><th>Jumlah Item</th><th>Total PO (Rp)</th><th>Qty PO</th><th>Qty Diterima</th><th>Blc</th><th>Status</th><th>Aksi</th></tr></thead>
                         <tbody id="po-list-body"></tbody>
@@ -647,7 +644,7 @@
                         <span id="master-search-count" style="font-weight:bold;color:#000080;">0 material</span>
                     </div>
                 </div>
-                <div class="sap-grid-container master-list-container" style="max-height:none; overflow:visible;">
+                <div class="sap-grid-container">
                     <table class="sap-grid">
                         <thead>
                             <tr>
@@ -702,7 +699,7 @@
                     <button class="sap-btn" onclick="openScannerModal('gr-line')">📷 Scan Barcode Material</button>
                     <button class="sap-btn sap-btn-green" onclick="postMigoDocument('101')">💾 Post Document (101 GR)</button>
                 </div>
-                <div class="sap-grid-container" style="max-height: 250px;">
+                <div class="sap-grid-container" style="max-height: 250px; overflow:auto;">
                     <table class="sap-grid" id="table-migo-gr">
                         <thead>
                             <tr>
@@ -754,7 +751,7 @@
                     <button class="sap-btn" onclick="openScannerModal('gi-line')">📷 Scan Barcode Material</button>
                     <button class="sap-btn sap-btn-red" onclick="postMigoDocument('201')">💾 Post Document (201 GI)</button>
                 </div>
-                <div class="sap-grid-container" style="max-height: 250px;">
+                <div class="sap-grid-container" style="max-height: 250px; overflow:auto;">
                     <table class="sap-grid" id="table-migo-gi">
                         <thead>
                             <tr>
@@ -795,7 +792,7 @@
                     </div>
                 </div>
 
-                <div class="sap-grid-container stock-list-container" style="max-height:none; overflow:visible;">
+                <div class="sap-grid-container">
                     <table class="sap-grid">
                         <thead>
                             <tr>
@@ -853,7 +850,7 @@
                     <button class="sap-btn" onclick="resetOpnameForm()">🔄 Reset Opname</button>
                 </div>
 
-                <div class="sap-grid-container" style="max-height: 300px;">
+                <div class="sap-grid-container" style="max-height: 300px; overflow:auto;">
                     <table class="sap-grid">
                         <thead>
                             <tr>
@@ -895,7 +892,7 @@
                     <button class="sap-btn" onclick="exportCSV('opname')">Export CSV / Excel</button>
                     <button class="sap-btn" onclick="printOpnameReport()">Cetak Laporan</button>
                 </div>
-                <div class="sap-grid-container"><table class="sap-grid">
+                <div class="sap-grid-container" style="max-height:300px; overflow:auto;"><table class="sap-grid">
                     <thead><tr><th>Tanggal</th><th>No. Dokumen</th><th>Kode Rak</th><th>Kode Material</th><th>Deskripsi</th><th>Buyer</th><th>Satuan</th><th>Stok Sistem</th><th>Hasil Fisik</th><th>Selisih</th><th>Status</th><th>Petugas</th></tr></thead>
                     <tbody id="report-opname-body"><tr><td colspan="12" style="text-align:center;">Belum ada riwayat opname.</td></tr></tbody>
                 </table></div>
@@ -922,7 +919,7 @@
                     </div>
                 </div>
 
-                <div class="sap-grid-container">
+                <div class="sap-grid-container" style="max-height:320px; overflow:auto;">
                     <table class="sap-grid">
                         <thead>
                             <tr>
@@ -967,7 +964,7 @@
                     </div>
                 </div>
 
-                <div class="sap-grid-container">
+                <div class="sap-grid-container" style="max-height:320px; overflow:auto;">
                     <table class="sap-grid">
                         <thead>
                             <tr>
@@ -1012,7 +1009,7 @@
                     </div>
                 </div>
 
-                <div class="sap-grid-container">
+                <div class="sap-grid-container" style="max-height:320px; overflow:auto;">
                     <table class="sap-grid">
                         <thead>
                             <tr>
@@ -1041,7 +1038,7 @@
                     <button class="sap-btn" onclick="printAllBarcodes()">🖨️ Cetak Semua Rak</button>
                 </div>
 
-                <div class="sap-grid-container" style="max-height: 250px; margin-bottom: 10px;">
+                <div class="sap-grid-container" style="max-height: 250px; margin-bottom: 10px; overflow:auto;">
                     <table class="sap-grid">
                         <thead>
                             <tr>
@@ -1161,7 +1158,7 @@
                 <button class="sap-btn" onclick="exportLedgerCSV()">📥 Export CSV</button>
             </div>
 
-            <div class="sap-grid-container" style="max-height: 350px;">
+            <div class="sap-grid-container" style="max-height: 350px; overflow:auto;">
                 <table class="sap-grid">
                     <thead>
                         <tr>
@@ -1687,7 +1684,7 @@
         document.getElementById('grid-opname-body').innerHTML = `<tr><td colspan="8" style="text-align:center; padding:15px; color:#666;">Pilih/Scan Rak dan klik tombol "Load Data Material di Rak" untuk memulai Opname.</td></tr>`;
     }
 
-    /* RENDER TABEL MASTER MATERIAL WITH PAGINATION (20 ITEMS PER PAGE) */
+    /* RENDER TABEL MASTER MATERIAL WITH PAGINATION (20 ITEMS PER PAGE, NO SCROLL) */
     function renderMasterTable() {
         const tbody = document.getElementById('grid-master-body');
         if (!tbody) return;
@@ -1965,7 +1962,7 @@
         return map;
     }
 
-    /* RENDER TABEL STOK (MMBE) WITH PAGINATION (20 ITEMS PER PAGE) */
+    /* RENDER TABEL STOK (MMBE) WITH PAGINATION (20 ITEMS PER PAGE, NO SCROLL) */
     function renderStockTable() {
         const search = document.getElementById('stock-search').value.trim().toLowerCase();
         const buyerFilter = document.getElementById('stock-buyer-filter').value.toLowerCase();
