@@ -260,7 +260,7 @@
             font-weight: bold;
         }
 
-        /* Data Table Grid (Tanpa Scroll Vertikal, Diatur Penuh oleh Pagination) */
+        /* Data Table Grid */
         .sap-grid-container {
             overflow: visible;
             border: 1px solid var(--sap-border-mid);
@@ -464,7 +464,7 @@
         <button class="sap-btn" onclick="switchTab('rekap-style')">ZSTYLE</button>
         <button class="sap-btn" onclick="switchTab('mb51')">MB51 (Mutasi)</button>
         <button class="sap-btn" onclick="switchTab('fsn')">FSN</button>
-        <button class="sap-btn" onclick="switchTab('print-barcode')">ZPRINT (Cetak Rak)</button>
+        <button class="sap-btn" onclick="switchTab('print-barcode')">ZPRINT (Cetak Barcode)</button>
     </div>
 
     <!-- SAP Module Tabs -->
@@ -480,7 +480,7 @@
         <div class="sap-tab" id="tab-rekap-style" onclick="switchTab('rekap-style')">Rekap Style (ZSTYLE)</div>
         <div class="sap-tab" id="tab-mb51" onclick="switchTab('mb51')">Mutasi Barang (MB51)</div>
         <div class="sap-tab" id="tab-fsn" onclick="switchTab('fsn')">Analisis FSN</div>
-        <div class="sap-tab" id="tab-print-barcode" onclick="switchTab('print-barcode')">Cetak Rak (ZPRINT)</div>
+        <div class="sap-tab" id="tab-print-barcode" onclick="switchTab('print-barcode')">Cetak Barcode (ZPRINT)</div>
     </div>
 
     <!-- Work Area Body -->
@@ -1029,31 +1029,57 @@
             </div>
         </div>
 
-        <!-- MODUL 7: CETAK LABEL BARCODE KODE RAK (ZPRINT) -->
+        <!-- MODUL 7: CETAK LABEL BARCODE (ZPRINT - RAK & ITEM MATERIAL) -->
         <div id="view-print-barcode" style="display: none;">
             <div class="sap-panel">
-                <div class="sap-panel-title">Cetak Label Barcode Lokasi Rak Gudang (ZPRINT)</div>
+                <div class="sap-panel-title">Cetak Label Barcode Gudang & Material (ZPRINT)</div>
                 <div style="margin-bottom: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-                    <button class="sap-btn sap-btn-green" onclick="printSelectedBarcodes()">🖨️ Cetak Rak Terpilih</button>
+                    <button class="sap-btn sap-btn-green" onclick="printSelectedBarcodes()">🖨️ Cetak Item/Rak Terpilih</button>
                     <button class="sap-btn" onclick="printAllBarcodes()">🖨️ Cetak Semua Rak</button>
                 </div>
 
-                <div class="sap-grid-container" style="max-height: 250px; margin-bottom: 10px; overflow:auto;">
-                    <table class="sap-grid">
-                        <thead>
-                            <tr>
-                                <th style="width: 35px; text-align: center;"><input type="checkbox" id="chk-all-sloc" onclick="toggleSelectAllSloc(this)"></th>
-                                <th>Kode Lokasi Rak (SLoc)</th>
-                                <th>Jumlah Transaksi di Rak Ini</th>
-                                <th>Daftar Kode Material Terkait</th>
-                            </tr>
-                        </thead>
-                        <tbody id="grid-print-sloc-body"></tbody>
-                    </table>
+                <div class="sap-tabs" style="margin-bottom: 6px;">
+                    <div class="sap-tab active" id="print-tab-sloc" onclick="switchPrintSubTab('sloc')">Lokasi Rak (SLoc)</div>
+                    <div class="sap-tab" id="print-tab-item" onclick="switchPrintSubTab('item')">Item Material</div>
+                </div>
+
+                <!-- Sub-tab Rak -->
+                <div id="print-container-sloc">
+                    <div class="sap-grid-container" style="max-height: 250px; margin-bottom: 10px; overflow:auto;">
+                        <table class="sap-grid">
+                            <thead>
+                                <tr>
+                                    <th style="width: 35px; text-align: center;"><input type="checkbox" id="chk-all-sloc" onclick="toggleSelectAllSloc(this)"></th>
+                                    <th>Kode Lokasi Rak (SLoc)</th>
+                                    <th>Jumlah Transaksi di Rak Ini</th>
+                                    <th>Daftar Kode Material Terkait</th>
+                                </tr>
+                            </thead>
+                            <tbody id="grid-print-sloc-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sub-tab Item Material -->
+                <div id="print-container-item" style="display: none;">
+                    <div class="sap-grid-container" style="max-height: 250px; margin-bottom: 10px; overflow:auto;">
+                        <table class="sap-grid">
+                            <thead>
+                                <tr>
+                                    <th style="width: 35px; text-align: center;"><input type="checkbox" id="chk-all-item" onclick="toggleSelectAllItem(this)"></th>
+                                    <th>Kode Material</th>
+                                    <th>Deskripsi Material</th>
+                                    <th>Buyer</th>
+                                    <th>Satuan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="grid-print-item-body"></tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div class="sap-panel" style="background: #fff; padding: 15px; text-align: center; max-width: 380px; margin: 0 auto; border: 2px dashed #404040;">
-                    <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; color: #000080;">GARMENT WAREHOUSE LOCATION</div>
+                    <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; color: #000080;">GARMENT WAREHOUSE LABEL PREVIEW</div>
                     <div id="barcode-container" style="padding: 5px;">
                         <svg id="barcode-element"></svg>
                     </div>
@@ -1230,6 +1256,7 @@
     const ITEMS_PER_PAGE = 20;
     let masterCurrentPage = 1;
     let stockCurrentPage = 1;
+    let currentPrintSubTab = 'sloc';
 
     const CLOUD_COLLECTIONS = {
         materials: 'ig_materials',
@@ -1422,83 +1449,127 @@
         document.getElementById('tcode-input').value = '';
     }
 
+    function switchPrintSubTab(subTab) {
+        currentPrintSubTab = subTab;
+        document.querySelectorAll('#view-print-barcode .sap-tabs .sap-tab').forEach(t => t.classList.remove('active'));
+        if (subTab === 'sloc') {
+            document.getElementById('print-tab-sloc').classList.add('active');
+            document.getElementById('print-container-sloc').style.display = 'block';
+            document.getElementById('print-container-item').style.display = 'none';
+        } else {
+            document.getElementById('print-tab-item').classList.add('active');
+            document.getElementById('print-container-sloc').style.display = 'none';
+            document.getElementById('print-container-item').style.display = 'block';
+        }
+    }
+
     function initPrintBarcodeModule() {
-        const tbody = document.getElementById('grid-print-sloc-body');
-        if (!tbody) return;
-        tbody.innerHTML = '';
+        // Init Sloc table
+        const tbodySloc = document.getElementById('grid-print-sloc-body');
+        if (tbodySloc) {
+            tbodySloc.innerHTML = '';
+            const slocMap = {};
+            mutasiLog.forEach(log => {
+                if (log.sloc && log.sloc !== '-') {
+                    const sloc = log.sloc.trim().toUpperCase();
+                    if (!slocMap[sloc]) slocMap[sloc] = new Set();
+                    slocMap[sloc].add(log.code);
+                }
+            });
+            const uniqueSlocs = Object.keys(slocMap).sort();
+            uniqueSlocs.forEach((sloc) => {
+                const codes = Array.from(slocMap[sloc]);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align: center;"><input type="checkbox" class="sloc-checkbox" value="${sloc}"></td>
+                    <td><strong>${sloc}</strong></td>
+                    <td style="text-align: center;">${codes.length} Transaksi/Material</td>
+                    <td>${codes.join(', ')}</td>
+                `;
+                tbodySloc.appendChild(tr);
+            });
+            if (uniqueSlocs.length > 0) previewSingleBarcode(uniqueSlocs[0]);
+        }
 
-        const slocMap = {};
-        mutasiLog.forEach(log => {
-            if (log.sloc && log.sloc !== '-') {
-                const sloc = log.sloc.trim().toUpperCase();
-                if (!slocMap[sloc]) slocMap[sloc] = new Set();
-                slocMap[sloc].add(log.code);
-            }
-        });
-
-        const uniqueSlocs = Object.keys(slocMap).sort();
-
-        uniqueSlocs.forEach((sloc) => {
-            const codes = Array.from(slocMap[sloc]);
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="text-align: center;"><input type="checkbox" class="sloc-checkbox" value="${sloc}"></td>
-                <td><strong>${sloc}</strong></td>
-                <td style="text-align: center;">${codes.length} Transaksi/Material</td>
-                <td>${codes.join(', ')}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        if (uniqueSlocs.length > 0) previewSingleBarcode(uniqueSlocs[0]);
+        // Init Item Material table
+        const tbodyItem = document.getElementById('grid-print-item-body');
+        if (tbodyItem) {
+            tbodyItem.innerHTML = '';
+            const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
+            sortedMaterials.forEach(mat => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align: center;"><input type="checkbox" class="item-checkbox" value="${mat.code}"></td>
+                    <td><strong>${mat.code}</strong></td>
+                    <td>${mat.desc}</td>
+                    <td>${mat.buyer}</td>
+                    <td>${mat.uom}</td>
+                `;
+                tbodyItem.appendChild(tr);
+            });
+        }
     }
 
     function toggleSelectAllSloc(masterChk) {
         document.querySelectorAll('.sloc-checkbox').forEach(chk => chk.checked = masterChk.checked);
     }
 
+    function toggleSelectAllItem(masterChk) {
+        document.querySelectorAll('.item-checkbox').forEach(chk => chk.checked = masterChk.checked);
+    }
+
     function previewSingleBarcode(text) {
         try {
-            JsBarcode("#barcode-element", text, { format: "CODE128", lineColor: "#000", width: 2, height: 55, displayValue: true });
+            JsBarcode("#barcode-element", text, { format: "CODE128", lineColor: "#000", width: 2, height: 55, displayValue: true, fontSize: 13 });
             document.getElementById('barcode-label-text').innerText = text;
         } catch (e) { console.error(e); }
     }
 
-    function generatePrintSheet(slocList) {
+    function generatePrintSheet(list, typeLabel) {
         const container = document.getElementById('print-sheet-container');
         container.innerHTML = '';
-        if (slocList.length === 0) { alert('Pilih minimal satu lokasi rak untuk dicetak!'); return false; }
+        if (list.length === 0) { alert('Pilih minimal satu lokasi atau item untuk dicetak!'); return false; }
 
-        slocList.forEach((sloc, index) => {
+        list.forEach((val, index) => {
             const card = document.createElement('div');
             card.className = 'print-label-card';
             card.innerHTML = `
-                <div style="font-size: 11px; font-weight: bold; color: #000080; margin-bottom: 4px; text-transform: uppercase;">GARMENT WAREHOUSE LOCATION</div>
+                <div style="font-size: 11px; font-weight: bold; color: #000080; margin-bottom: 4px; text-transform: uppercase;">GARMENT WAREHOUSE ${typeLabel}</div>
                 <div style="margin: 6px 0;"><svg id="print-barcode-${index}"></svg></div>
-                <div style="font-size: 10px; color: #333; border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
-                    <b>Area / Lokasi Rak Gudang Resmi</b>
+                <div style="font-size: 11px; font-weight: bold; color: #000; border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
+                    Kode: ${val}
                 </div>
             `;
             container.appendChild(card);
         });
 
-        slocList.forEach((sloc, index) => {
+        list.forEach((val, index) => {
             try {
-                JsBarcode(`#print-barcode-${index}`, sloc, { format: "CODE128", lineColor: "#000", width: 2.5, height: 60, displayValue: true, fontSize: 14 });
+                JsBarcode(`#print-barcode-${index}`, val, { format: "CODE128", lineColor: "#000", width: 2.2, height: 50, displayValue: true, fontSize: 13 });
             } catch(e) { console.error(e); }
         });
         return true;
     }
 
     function printSelectedBarcodes() {
-        const slocs = Array.from(document.querySelectorAll('.sloc-checkbox:checked')).map(chk => chk.value);
-        if (generatePrintSheet(slocs)) window.print();
+        if (currentPrintSubTab === 'sloc') {
+            const slocs = Array.from(document.querySelectorAll('.sloc-checkbox:checked')).map(chk => chk.value);
+            if (generatePrintSheet(slocs, 'LOCATION')) window.print();
+        } else {
+            const items = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(chk => chk.value);
+            if (generatePrintSheet(items, 'MATERIAL ITEM')) window.print();
+        }
     }
 
     function printAllBarcodes() {
-        const slocSet = new Set();
-        mutasiLog.forEach(log => { if (log.sloc && log.sloc !== '-') slocSet.add(log.sloc.trim().toUpperCase()); });
-        if (generatePrintSheet(Array.from(slocSet))) window.print();
+        if (currentPrintSubTab === 'sloc') {
+            const slocSet = new Set();
+            mutasiLog.forEach(log => { if (log.sloc && log.sloc !== '-') slocSet.add(log.sloc.trim().toUpperCase()); });
+            if (generatePrintSheet(Array.from(slocSet), 'LOCATION')) window.print();
+        } else {
+            const itemCodes = materials.map(m => m.code);
+            if (generatePrintSheet(itemCodes, 'MATERIAL ITEM')) window.print();
+        }
     }
 
     function openScannerModal(targetType) {
@@ -1734,8 +1805,8 @@
                 <td>${mat.uom || ''}</td>
                 <td style="text-align:right;">${mat.reorder || 0}</td>
                 <td>
-                    <button class="sap-btn" onclick="editMaterial(${JSON.stringify(String(mat.code || ''))})">✏️ Edit</button>
-                    <button class="sap-btn sap-btn-red" onclick="deleteMaterial(${JSON.stringify(String(mat.code || ''))})">🗑️ Hapus</button>
+                    <button type="button" class="sap-btn" onclick="editMaterial('${mat.code}')">✏️ Edit</button>
+                    <button type="button" class="sap-btn sap-btn-red" onclick="deleteMaterial('${mat.code}')">🗑️ Hapus</button>
                 </td>
             </tr>
         `).join('');
@@ -1962,7 +2033,7 @@
         return map;
     }
 
-    /* RENDER TABEL STOK (MMBE) WITH PAGINATION (20 ITEMS PER PAGE, NO SCROLL) */
+    /* RENDER TABEL STOK (MMBE) WITH PAGINATION (BARCODE ITEM DI-HIDE) */
     function renderStockTable() {
         const search = document.getElementById('stock-search').value.trim().toLowerCase();
         const buyerFilter = document.getElementById('stock-buyer-filter').value.toLowerCase();
@@ -2475,10 +2546,10 @@
             });
             downloadCSV(csv, 'Stock_Overview.csv');
         } else if (type === 'opname') {
-            csv += "Tanggal;No Dokumen;Kode Rak;Kode Material;Deskripsi;Buyer;Satuan;Stok Sistem;Hasil Fisik;Selisih;Status;Petugas\\n";
+            csv += "Tanggal;No Dokumen;Kode Rak;Kode Material;Deskripsi;Buyer;Satuan;Stok Sistem;Hasil Fisik;Selisih;Status;Petugas\n";
             getFilteredOpnameHistory().forEach(r => {
                 const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-                csv += [r.date,r.docNum,r.sloc,r.code,r.desc,r.buyer,r.uom,r.bookQty,r.countedQty,r.variance,r.status,r.user].map(esc).join(';') + "\\n";
+                csv += [r.date,r.docNum,r.sloc,r.code,r.desc,r.buyer,r.uom,r.bookQty,r.countedQty,r.variance,r.status,r.user].map(esc).join(';') + "\n";
             });
             downloadCSV(csv, 'Report_Hasil_Stok_Opname.csv');
         } else if (type === 'mutasi') {
