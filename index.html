@@ -946,11 +946,11 @@
                 <div class="sap-form-grid" style="margin-bottom: 6px;">
                     <div class="sap-field">
                         <label>Search Filter</label>
-                        <input type="text" id="mb51-search" oninput="renderMutasiTable()" placeholder="Cari Dokumen, Kode, Style, SLoc...">
+                        <input type="text" id="mb51-search" oninput="mutasiCurrentPage=1; renderMutasiTable();" placeholder="Cari Dokumen, Kode, Style, SLoc...">
                     </div>
                     <div class="sap-field">
                         <label>Jenis Mutasi</label>
-                        <select id="mb51-mvt-filter" onchange="renderMutasiTable()">
+                        <select id="mb51-mvt-filter" onchange="mutasiCurrentPage=1; renderMutasiTable();">
                             <option value="ALL">Semua Jenis (Masuk / Keluar / Opname)</option>
                             <option value="101">Barang Masuk (101 GR)</option>
                             <option value="201">Barang Keluar (201 GI)</option>
@@ -964,7 +964,7 @@
                     </div>
                 </div>
 
-                <div class="sap-grid-container" style="max-height:320px; overflow:auto;">
+                <div class="sap-grid-container">
                     <table class="sap-grid">
                         <thead>
                             <tr>
@@ -985,6 +985,12 @@
                         </thead>
                         <tbody id="grid-mutasi-body"></tbody>
                     </table>
+                </div>
+                <!-- Pagination Controls for Mutasi Table -->
+                <div class="sap-pagination">
+                    <button class="sap-btn" id="mutasi-btn-prev" onclick="changeMutasiPage(-1)">◀ Sebelumnya</button>
+                    <span id="mutasi-page-info">Halaman 1 dari 1</span>
+                    <button class="sap-btn" id="mutasi-btn-next" onclick="changeMutasiPage(1)">Selanjutnya ▶</button>
                 </div>
             </div>
         </div>
@@ -1252,10 +1258,11 @@
     let cloudReady = false;
     let cloudSaveQueue = Promise.resolve();
 
-    // Variable Pagination untuk Master & Stock (20 item per halaman)
+    // Variable Pagination untuk Master, Stock, & Mutasi (20 item per halaman)
     const ITEMS_PER_PAGE = 20;
     let masterCurrentPage = 1;
     let stockCurrentPage = 1;
+    let mutasiCurrentPage = 1;
     let currentPrintSubTab = 'sloc';
 
     const CLOUD_COLLECTIONS = {
@@ -2247,12 +2254,40 @@
         const tbody = document.getElementById('grid-mutasi-body');
         tbody.innerHTML = '';
 
-        mutasiLog.forEach((log, index) => {
-            if (mvtFilter === 'OPNAME' && log.mvt !== '701' && log.mvt !== '702') return;
-            if (mvtFilter !== 'ALL' && mvtFilter !== 'OPNAME' && log.mvt !== mvtFilter) return;
+        // Hubungkan dengan indeks asli dari mutasiLog agar fungsi Edit & Hapus tetap akurat
+        const indexedMutasi = mutasiLog.map((log, originalIndex) => ({ log, originalIndex }));
 
-            if (search && !log.docNum.toLowerCase().includes(search) && !log.code.toLowerCase().includes(search) && !log.desc.toLowerCase().includes(search) && !(log.sloc && log.sloc.toLowerCase().includes(search))) return;
+        const filtered = indexedMutasi.filter(({ log }) => {
+            if (mvtFilter === 'OPNAME' && log.mvt !== '701' && log.mvt !== '702') return false;
+            if (mvtFilter !== 'ALL' && mvtFilter !== 'OPNAME' && log.mvt !== mvtFilter) return false;
+            if (search && !log.docNum.toLowerCase().includes(search) && !log.code.toLowerCase().includes(search) && !log.desc.toLowerCase().includes(search) && !(log.sloc && log.sloc.toLowerCase().includes(search))) return false;
+            return true;
+        });
 
+        const totalItems = filtered.length;
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+
+        if (mutasiCurrentPage > totalPages) mutasiCurrentPage = totalPages;
+        if (mutasiCurrentPage < 1) mutasiCurrentPage = 1;
+
+        const startIndex = (mutasiCurrentPage - 1) * ITEMS_PER_PAGE;
+        const paginated = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+        // Update Navigasi Pagination Mutasi
+        const pageInfo = document.getElementById('mutasi-page-info');
+        if (pageInfo) pageInfo.innerText = `Halaman ${mutasiCurrentPage} dari ${totalPages} (${totalItems} total data)`;
+
+        const btnPrev = document.getElementById('mutasi-btn-prev');
+        const btnNext = document.getElementById('mutasi-btn-next');
+        if (btnPrev) btnPrev.disabled = (mutasiCurrentPage <= 1);
+        if (btnNext) btnNext.disabled = (mutasiCurrentPage >= totalPages);
+
+        if (!paginated.length) {
+            tbody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding:14px; color:#666;">Tidak ada data mutasi yang cocok.</td></tr>`;
+            return;
+        }
+
+        paginated.forEach(({ log, originalIndex }) => {
             let mvtBadge = '';
             if (log.mvt === '101') mvtBadge = '<span class="badge-mvt mvt-gr">Masuk (GR)</span>';
             else if (log.mvt === '201') mvtBadge = '<span class="badge-mvt mvt-gi">Keluar (GI)</span>';
@@ -2275,12 +2310,17 @@
                 <td>${log.uom}</td>
                 <td>${log.text || '-'}</td>
                 <td style="text-align: center;">
-                    <button class="sap-btn" onclick="openEditMutasiModal(${index})">✏️ Edit</button>
-                    <button class="sap-btn sap-btn-red" onclick="deleteMutasiItem(${index})">🗑️ Hapus</button>
+                    <button class="sap-btn" onclick="openEditMutasiModal(${originalIndex})">✏️ Edit</button>
+                    <button class="sap-btn sap-btn-red" onclick="deleteMutasiItem(${originalIndex})">🗑️ Hapus</button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
+    }
+
+    function changeMutasiPage(delta) {
+        mutasiCurrentPage += delta;
+        renderMutasiTable();
     }
 
     function openEditMutasiModal(index) {
