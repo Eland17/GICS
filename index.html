@@ -130,7 +130,12 @@
             white-space: nowrap;
         }
 
-        .sap-btn:active {
+        .sap-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .sap-btn:active:not(:disabled) {
             border-color: var(--sap-border-dark) var(--sap-border-light) var(--sap-border-light) var(--sap-border-dark);
             padding: 3px 7px 1px 9px;
             background: #c0c0c0;
@@ -241,6 +246,18 @@
             background-color: var(--sap-input-bg);
             flex-grow: 1;
             height: 20px;
+        }
+
+        /* Pagination Bar */
+        .sap-pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ece9d8;
+            border: 1px solid var(--sap-border-mid);
+            border-top: none;
+            padding: 4px 8px;
+            font-weight: bold;
         }
 
         /* Data Table Grid */
@@ -623,10 +640,10 @@
                 <div class="sap-form-grid" style="margin-bottom:6px;">
                     <div class="sap-field">
                         <label>Pencarian Master</label>
-                        <input type="text" id="master-search" oninput="renderMasterTable()" placeholder="Cari kode material, deskripsi, buyer, atau satuan...">
+                        <input type="text" id="master-search" oninput="masterCurrentPage=1; renderMasterTable();" placeholder="Cari kode material, deskripsi, buyer, atau satuan...">
                     </div>
                     <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
-                        <button type="button" class="sap-btn" onclick="document.getElementById('master-search').value='';renderMasterTable();">✖ Reset Pencarian</button>
+                        <button type="button" class="sap-btn" onclick="document.getElementById('master-search').value=''; masterCurrentPage=1; renderMasterTable();">✖ Reset Pencarian</button>
                         <span id="master-search-count" style="font-weight:bold;color:#000080;">0 material</span>
                     </div>
                 </div>
@@ -644,6 +661,12 @@
                         </thead>
                         <tbody id="grid-master-body"></tbody>
                     </table>
+                </div>
+                <!-- Pagination Controls for Master Table -->
+                <div class="sap-pagination">
+                    <button class="sap-btn" id="master-btn-prev" onclick="changeMasterPage(-1)">◀ Sebelumnya</button>
+                    <span id="master-page-info">Halaman 1 dari 1</span>
+                    <button class="sap-btn" id="master-btn-next" onclick="changeMasterPage(1)">Selanjutnya ▶</button>
                 </div>
             </div>
         </div>
@@ -759,11 +782,11 @@
                 <div class="sap-form-grid" style="margin-bottom: 6px;">
                     <div class="sap-field">
                         <label>Filter Search</label>
-                        <input type="text" id="stock-search" oninput="renderStockTable()" placeholder="Cari Kode, Nama, Buyer, Rak (Contoh: RAK-A3)...">
+                        <input type="text" id="stock-search" oninput="stockCurrentPage=1; renderStockTable();" placeholder="Cari Kode, Nama, Buyer, Rak (Contoh: RAK-A3)...">
                     </div>
                     <div class="sap-field">
                         <label>Buyer Filter</label>
-                        <input type="text" id="stock-buyer-filter" oninput="renderStockTable()" placeholder="Cari Nama Buyer (Ketik Manual)...">
+                        <input type="text" id="stock-buyer-filter" oninput="stockCurrentPage=1; renderStockTable();" placeholder="Cari Nama Buyer (Ketik Manual)...">
                     </div>
                     <div style="display: flex; gap: 4px; flex-wrap:wrap;">
                         <button class="sap-btn" onclick="openScannerModal('stock-search')">📷 Scan Barcode/Rak</button>
@@ -789,6 +812,12 @@
                         </thead>
                         <tbody id="grid-stock-body"></tbody>
                     </table>
+                </div>
+                <!-- Pagination Controls for Stock Table -->
+                <div class="sap-pagination">
+                    <button class="sap-btn" id="stock-btn-prev" onclick="changeStockPage(-1)">◀ Sebelumnya</button>
+                    <span id="stock-page-info">Halaman 1 dari 1</span>
+                    <button class="sap-btn" id="stock-btn-next" onclick="changeStockPage(1)">Selanjutnya ▶</button>
                 </div>
             </div>
         </div>
@@ -1176,7 +1205,7 @@
         { docNum: "7000000001", date: "2026-10-15", mvt: "701", code: "MAT-1001", desc: "Kain Katun Combed 30S", style: "-", sloc: "RAK-A1", partner: "Auditor Gudang", ref: "PHYS-OPNAME-RAK-A1", qty: 5, uom: "KG", text: "Opname Adjustment: Surplus +5 KG" }
     ];
 
-    // Firebase configuration provided by the owner of this project.
+    // Firebase configuration
     const firebaseConfig = {
         apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
         authDomain: "inventory-gudang-16dfe.firebaseapp.com",
@@ -1200,6 +1229,11 @@
     let cloudReady = false;
     let cloudSaveQueue = Promise.resolve();
 
+    // Variable Pagination untuk Master & Stock (20 item per halaman)
+    const ITEMS_PER_PAGE = 20;
+    let masterCurrentPage = 1;
+    let stockCurrentPage = 1;
+
     const CLOUD_COLLECTIONS = {
         materials: 'ig_materials',
         mutasi: 'ig_mutasi',
@@ -1207,7 +1241,6 @@
         opnameHistory: 'ig_opnameHistory'
     };
 
-    // Simpan array per dokumen agar tidak menumpuk seluruh riwayat dalam satu dokumen Firestore.
     async function replaceCloudCollection(collectionName, rows, idField) {
         const ref = db.collection(collectionName);
         const oldDocs = await ref.get();
@@ -1223,7 +1256,6 @@
                 const index = i + offset;
                 const safeRow = JSON.parse(JSON.stringify(row));
                 const docId = String(safeRow[idField] ?? `${index}`).replaceAll('/', '_').slice(0, 120) || String(index);
-                // Prefix index preserves the current list order when loading again.
                 batch.set(ref.doc(`${String(index).padStart(8, '0')}_${docId}`), { ...safeRow, _order: index });
             });
             await batch.commit();
@@ -1263,7 +1295,6 @@
             purchaseOrders = cloudPO;
             opnameHistory = cloudOpname;
         } else {
-            // First run: preserve existing browser data. If there is none, use the HTML's sample defaults.
             const hasLocalData = ['sap_materials','sap_mutasi','sap_purchase_orders','sap_opname_history']
                 .some(key => localStorage.getItem(key) !== null);
             if (!hasLocalData) {
@@ -1287,14 +1318,12 @@
 
     window.addEventListener('DOMContentLoaded', async () => {
         try {
-            // Anonymous auth must be enabled in Firebase Console > Authentication > Sign-in method.
             await auth.signInAnonymously();
             await loadCloudOrMigrateLocal();
             showStatus('Terhubung ke Firebase: inventory-gudang-16dfe', 'S');
         } catch (err) {
             console.error('Firebase init/load error:', err);
             showStatus('Firebase belum terhubung. Periksa Anonymous Auth dan Firestore Rules.', 'E');
-            alert('Tidak dapat memuat data Firebase. Periksa koneksi internet, aktifkan Anonymous Authentication, dan pasang Firestore Rules yang sesuai. Detail: ' + (err.message || err.code || err));
         }
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('gr-date').value = today;
@@ -1330,7 +1359,6 @@
     function updateGlobalDatalist() {
         const datalist = document.getElementById('global-material-list');
         datalist.innerHTML = '';
-        // Urutkan dropdown datalist berdasarkan Kode Material
         const sorted = [...materials].sort((a, b) => a.code.localeCompare(b.code));
         sorted.forEach(m => {
             const option = document.createElement('option');
@@ -1500,6 +1528,7 @@
 
         if (activeScannerTarget === 'stock-search') {
             document.getElementById('stock-search').value = cleanText;
+            stockCurrentPage = 1;
             renderStockTable();
         } else if (activeScannerTarget === 'opname-sloc') {
             document.getElementById('opname-sloc').value = cleanText;
@@ -1531,7 +1560,6 @@
         tbody.innerHTML = '';
 
         let foundCount = 0;
-        // Urutkan material saat load stok opname
         const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
         sortedMaterials.forEach(mat => {
             const key = `${mat.code}__${sloc}`;
@@ -1659,27 +1687,49 @@
         document.getElementById('grid-opname-body').innerHTML = `<tr><td colspan="8" style="text-align:center; padding:15px; color:#666;">Pilih/Scan Rak dan klik tombol "Load Data Material di Rak" untuk memulai Opname.</td></tr>`;
     }
 
-    /* RENDER TABEL MASTER MATERIAL: PENCARIAN KODE, DESKRIPSI, BUYER, DAN SATUAN */
+    /* RENDER TABEL MASTER MATERIAL WITH PAGINATION (20 ITEMS PER PAGE) */
     function renderMasterTable() {
         const tbody = document.getElementById('grid-master-body');
         if (!tbody) return;
         const searchInput = document.getElementById('master-search');
         const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
 
-        const sortedMaterials = [...materials]
+        const filtered = [...materials]
             .filter(mat => !query || [mat.code, mat.desc, mat.buyer, mat.uom]
                 .some(value => String(value || '').toLowerCase().includes(query)))
             .sort((a, b) => String(a.code || '').localeCompare(String(b.code || '')));
 
-        const count = document.getElementById('master-search-count');
-        if (count) count.textContent = `${sortedMaterials.length} dari ${materials.length} material`;
+        const totalItems = filtered.length;
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
 
-        if (!sortedMaterials.length) {
+        if (masterCurrentPage > totalPages) masterCurrentPage = totalPages;
+        if (masterCurrentPage < 1) masterCurrentPage = 1;
+
+        const startIndex = (masterCurrentPage - 1) * ITEMS_PER_PAGE;
+        const paginatedMaterials = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+        const count = document.getElementById('master-search-count');
+        if (count) {
+            count.textContent = query 
+                ? `${totalItems} material ditemukan`
+                : `Total ${totalItems} material (${ITEMS_PER_PAGE} item/halaman)`;
+        }
+
+        // Update Navigasi Pagination
+        const pageInfo = document.getElementById('master-page-info');
+        if (pageInfo) pageInfo.innerText = `Halaman ${masterCurrentPage} dari ${totalPages}`;
+        
+        const btnPrev = document.getElementById('master-btn-prev');
+        const btnNext = document.getElementById('master-btn-next');
+        if (btnPrev) btnPrev.disabled = (masterCurrentPage <= 1);
+        if (btnNext) btnNext.disabled = (masterCurrentPage >= totalPages);
+
+        if (!paginatedMaterials.length) {
             tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:14px;color:#666;">Tidak ada master material yang cocok dengan pencarian.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = sortedMaterials.map(mat => `
+        tbody.innerHTML = paginatedMaterials.map(mat => `
             <tr>
                 <td><strong>${mat.code || ''}</strong></td>
                 <td>${mat.desc || ''}</td>
@@ -1692,6 +1742,11 @@
                 </td>
             </tr>
         `).join('');
+    }
+
+    function changeMasterPage(delta) {
+        masterCurrentPage += delta;
+        renderMasterTable();
     }
 
     function saveMaterialMaster(event) {
@@ -1910,6 +1965,7 @@
         return map;
     }
 
+    /* RENDER TABEL STOK (MMBE) WITH PAGINATION (20 ITEMS PER PAGE) */
     function renderStockTable() {
         const search = document.getElementById('stock-search').value.trim().toLowerCase();
         const buyerFilter = document.getElementById('stock-buyer-filter').value.toLowerCase();
@@ -1918,38 +1974,53 @@
 
         const stockBySLoc = calculateCurrentStockMapBySLoc();
         const totalStockMap = calculateCurrentStockMapTotal();
-        const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
 
-        sortedMaterials.forEach(mat => {
-            if (buyerFilter && !mat.buyer.toLowerCase().includes(buyerFilter)) return;
-            
-            let rakDetails = [];
+        let matchedMaterials = materials.filter(mat => {
+            if (buyerFilter && !mat.buyer.toLowerCase().includes(buyerFilter)) return false;
+            if (!search) return true;
+
             let slocsList = [];
-            
             Object.keys(stockBySLoc).forEach(key => {
                 const [mCode, slocName] = key.split('__');
                 if (mCode === mat.code && stockBySLoc[key] !== 0) {
-                    rakDetails.push(`<b>${slocName}</b>: ${stockBySLoc[key]} ${mat.uom}`);
                     slocsList.push(slocName.toLowerCase());
                 }
             });
 
-            let isMatched = false;
+            const isCodeMatch = mat.code.toLowerCase().includes(search);
+            const isDescMatch = mat.desc.toLowerCase().includes(search);
+            const isBuyerMatch = mat.buyer.toLowerCase().includes(search);
+            const isSlocMatch = slocsList.some(s => s.includes(search));
 
-            if (!search) {
-                isMatched = true;
-            } else {
-                const isCodeMatch = mat.code.toLowerCase().includes(search);
-                const isDescMatch = mat.desc.toLowerCase().includes(search);
-                const isBuyerMatch = mat.buyer.toLowerCase().includes(search);
-                const isSlocMatch = slocsList.some(s => s.includes(search));
+            return isCodeMatch || isDescMatch || isBuyerMatch || isSlocMatch;
+        }).sort((a, b) => a.code.localeCompare(b.code));
 
-                if (isCodeMatch || isDescMatch || isBuyerMatch || isSlocMatch) {
-                    isMatched = true;
+        const totalItems = matchedMaterials.length;
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+
+        if (stockCurrentPage > totalPages) stockCurrentPage = totalPages;
+        if (stockCurrentPage < 1) stockCurrentPage = 1;
+
+        const startIndex = (stockCurrentPage - 1) * ITEMS_PER_PAGE;
+        const paginatedMaterials = matchedMaterials.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+        // Update Controls Pagination Stock
+        const pageInfo = document.getElementById('stock-page-info');
+        if (pageInfo) pageInfo.innerText = `Halaman ${stockCurrentPage} dari ${totalPages} (${totalItems} total material)`;
+
+        const btnPrev = document.getElementById('stock-btn-prev');
+        const btnNext = document.getElementById('stock-btn-next');
+        if (btnPrev) btnPrev.disabled = (stockCurrentPage <= 1);
+        if (btnNext) btnNext.disabled = (stockCurrentPage >= totalPages);
+
+        paginatedMaterials.forEach(mat => {
+            let rakDetails = [];
+            Object.keys(stockBySLoc).forEach(key => {
+                const [mCode, slocName] = key.split('__');
+                if (mCode === mat.code && stockBySLoc[key] !== 0) {
+                    rakDetails.push(`<b>${slocName}</b>: ${stockBySLoc[key]} ${mat.uom}`);
                 }
-            }
-
-            if (!isMatched) return;
+            });
 
             const totalStock = totalStockMap[mat.code] || 0;
             const isLow = totalStock <= (mat.reorder || 0);
@@ -1976,6 +2047,11 @@
         }
 
         if (document.getElementById('dashboard-buyer-chart')) renderDashboard();
+    }
+
+    function changeStockPage(delta) {
+        stockCurrentPage += delta;
+        renderStockTable();
     }
 
     function renderRekapStyleTable() {
@@ -2097,7 +2173,6 @@
         downloadCSV(csv, `Kartu_Stok_${currentLedgerCode}.csv`);
     }
 
-    /* FORMAT KETERANGAN JENIS MUTASI YANG JELAS DI TABEL MB51 */
     function renderMutasiTable() {
         const search = document.getElementById('mb51-search').value.toLowerCase();
         const mvtFilter = document.getElementById('mb51-mvt-filter').value;
@@ -2105,7 +2180,6 @@
         tbody.innerHTML = '';
 
         mutasiLog.forEach((log, index) => {
-            // Logika Filter Dropdown
             if (mvtFilter === 'OPNAME' && log.mvt !== '701' && log.mvt !== '702') return;
             if (mvtFilter !== 'ALL' && mvtFilter !== 'OPNAME' && log.mvt !== mvtFilter) return;
 
@@ -2200,7 +2274,6 @@
         tbody.innerHTML = '';
         const stockMap = calculateCurrentStockMapTotal();
 
-        // Urutkan material pada FSN Table berdasarkan Kode Material
         const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
 
         sortedMaterials.forEach(mat => {
