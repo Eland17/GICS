@@ -1109,7 +1109,7 @@
                     <div id="barcode-container" style="padding: 5px;">
                         <svg id="barcode-element"></svg>
                     </div>
-                    <div id="barcode-label-text" style="font-size: 14px; font-weight: bold; margin-top: 2px; color: #000;">-</div>
+                    <div id="barcode-label-text" style="font-size: 14px; font-weight: bold; margin-top: 2px; color: #000;"></div>
                 </div>
             </div>
         </div>
@@ -1545,7 +1545,8 @@
     function previewSingleBarcode(text) {
         try {
             JsBarcode("#barcode-element", text, { format: "CODE128", lineColor: "#000", width: 2, height: 55, displayValue: true, fontSize: 13 });
-            document.getElementById('barcode-label-text').innerText = text;
+            const labelTextEl = document.getElementById('barcode-label-text');
+            if (labelTextEl) labelTextEl.innerText = "";
         } catch (e) { console.error(e); }
     }
 
@@ -1558,11 +1559,7 @@
             const card = document.createElement('div');
             card.className = 'print-label-card';
             card.innerHTML = `
-                <div style="font-size: 11px; font-weight: bold; color: #000080; margin-bottom: 4px; text-transform: uppercase;">GARMENT WAREHOUSE ${typeLabel}</div>
                 <div style="margin: 6px 0;"><svg id="print-barcode-${index}"></svg></div>
-                <div style="font-size: 11px; font-weight: bold; color: #000; border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
-                    Kode: ${val}
-                </div>
             `;
             container.appendChild(card);
         });
