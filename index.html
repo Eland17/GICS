@@ -816,10 +816,10 @@
                     <table class="sap-grid">
                         <thead>
                             <tr>
-                                <th>Kode Material</th>
-                                <th>Kode Buyer</th>
+                                <th style="text-align: center;">Kode Material</th>
+                                <th style="text-align: center;">Kode Buyer</th>
                                 <th>Deskripsi Material</th>
-                                <th>UoM</th>
+                                <th style="text-align: center;">UoM</th>
                                 <th style="text-align: right;">Stok</th>
                                 <th>Sloc Info (Rak & Qty)</th>
                                 <th style="text-align: right;">Reorder Level</th>
@@ -2112,10 +2112,10 @@
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><strong>${mat.code}</strong></td>
-                <td>${mat.buyer}</td>
+                <td style="text-align: center;"><strong>${mat.code}</strong></td>
+                <td style="text-align: center;">${mat.buyer}</td>
                 <td>${mat.desc}</td>
-                <td>${mat.uom}</td>
+                <td style="text-align: center;">${mat.uom}</td>
                 <td style="text-align: right; font-weight: bold; color: ${totalStock < 0 ? '#cc0000' : '#000'}">${totalStock.toLocaleString('id-ID')}</td>
                 <td>${slocDisplay}</td>
                 <td style="text-align: right;">${mat.reorder || 0}</td>
