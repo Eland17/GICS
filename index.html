@@ -620,7 +620,17 @@
 
             <div class="sap-panel" style="margin-top: 8px;">
                 <div class="sap-panel-title">Daftar Master Material (MM60 Data List) — Terurut Kode Material</div>
-                <div class="sap-grid-container" style="max-height: 320px;">
+                <div class="sap-form-grid" style="margin-bottom:6px;">
+                    <div class="sap-field">
+                        <label>Pencarian Master</label>
+                        <input type="text" id="master-search" oninput="renderMasterTable()" placeholder="Cari kode material, deskripsi, buyer, atau satuan...">
+                    </div>
+                    <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                        <button type="button" class="sap-btn" onclick="document.getElementById('master-search').value='';renderMasterTable();">✖ Reset Pencarian</button>
+                        <span id="master-search-count" style="font-weight:bold;color:#000080;">0 material</span>
+                    </div>
+                </div>
+                <div class="sap-grid-container master-list-container" style="max-height:none; overflow:visible;">
                     <table class="sap-grid">
                         <thead>
                             <tr>
@@ -762,7 +772,7 @@
                     </div>
                 </div>
 
-                <div class="sap-grid-container">
+                <div class="sap-grid-container stock-list-container" style="max-height:none; overflow:visible;">
                     <table class="sap-grid">
                         <thead>
                             <tr>
@@ -1649,29 +1659,39 @@
         document.getElementById('grid-opname-body').innerHTML = `<tr><td colspan="8" style="text-align:center; padding:15px; color:#666;">Pilih/Scan Rak dan klik tombol "Load Data Material di Rak" untuk memulai Opname.</td></tr>`;
     }
 
-    /* RENDER TABEL MASTER MATERIAL (MM60) DENGAN PENGURUTAN BERDASARKAN KODE MATERIAL */
+    /* RENDER TABEL MASTER MATERIAL: PENCARIAN KODE, DESKRIPSI, BUYER, DAN SATUAN */
     function renderMasterTable() {
         const tbody = document.getElementById('grid-master-body');
-        tbody.innerHTML = '';
-        
-        // Urutkan array materials secara alfabetis berdasarkan Kode Material (A-Z)
-        const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
+        if (!tbody) return;
+        const searchInput = document.getElementById('master-search');
+        const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
 
-        sortedMaterials.forEach((mat) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><strong>${mat.code}</strong></td>
-                <td>${mat.desc}</td>
-                <td>${mat.buyer}</td>
-                <td>${mat.uom}</td>
+        const sortedMaterials = [...materials]
+            .filter(mat => !query || [mat.code, mat.desc, mat.buyer, mat.uom]
+                .some(value => String(value || '').toLowerCase().includes(query)))
+            .sort((a, b) => String(a.code || '').localeCompare(String(b.code || '')));
+
+        const count = document.getElementById('master-search-count');
+        if (count) count.textContent = `${sortedMaterials.length} dari ${materials.length} material`;
+
+        if (!sortedMaterials.length) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:14px;color:#666;">Tidak ada master material yang cocok dengan pencarian.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = sortedMaterials.map(mat => `
+            <tr>
+                <td><strong>${mat.code || ''}</strong></td>
+                <td>${mat.desc || ''}</td>
+                <td>${mat.buyer || ''}</td>
+                <td>${mat.uom || ''}</td>
                 <td style="text-align:right;">${mat.reorder || 0}</td>
                 <td>
-                    <button class="sap-btn" onclick="editMaterial('${mat.code}')">✏️ Edit</button>
-                    <button class="sap-btn sap-btn-red" onclick="deleteMaterial('${mat.code}')">🗑️ Hapus</button>
+                    <button class="sap-btn" onclick="editMaterial(${JSON.stringify(String(mat.code || ''))})">✏️ Edit</button>
+                    <button class="sap-btn sap-btn-red" onclick="deleteMaterial(${JSON.stringify(String(mat.code || ''))})">🗑️ Hapus</button>
                 </td>
-            `;
-            tbody.appendChild(tr);
-        });
+            </tr>
+        `).join('');
     }
 
     function saveMaterialMaster(event) {
