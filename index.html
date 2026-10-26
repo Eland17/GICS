@@ -384,7 +384,7 @@
             }
         }
 
-        /* RESPONSIVE MOBILE OPTIMIZATION */
+        /* RESPONSIVE MOBILE OPTIMIZATION KHUSUS XIAOMI REDMI NOTE 7 (STOK BARANG MMBE) */
         @media(max-width: 768px) {
             body { 
                 padding: 2px; 
@@ -392,8 +392,28 @@
             }
             .dash-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
             .dash-layout { grid-template-columns: 1fr; }
-            .sap-form-grid { grid-template-columns: 1fr; }
-            .sap-field label { width: 90px; text-align: left; }
+            
+            /* Penyesuaian khusus tampilan mobile untuk Modul Stok Barang (MMBE) */
+            #view-mmbe .sap-form-grid { 
+                grid-template-columns: 1fr; 
+                gap: 6px;
+            }
+            #view-mmbe .sap-field label { 
+                width: 95px; 
+                text-align: left; 
+            }
+            #view-mmbe .sap-field input, #view-mmbe .sap-field select {
+                height: 26px; /* Memperbesar tinggi input agar mudah disentuh di layar Redmi Note 7 */
+            }
+            #view-mmbe .sap-grid-container {
+                overflow-x: auto; /* Memastikan tabel bisa di-scroll kesamping dengan mulus tanpa merusak layar */
+                max-height: 380px;
+            }
+            #view-mmbe .sap-btn { 
+                padding: 4px 8px; 
+                height: 26px; 
+            }
+
             .sap-btn { padding: 2px 6px; height: 24px; }
             .sap-titlebar span:nth-child(2) { display: none; }
         }
@@ -779,16 +799,16 @@
                 <div class="sap-form-grid" style="margin-bottom: 6px;">
                     <div class="sap-field">
                         <label>Filter Search</label>
-                        <input type="text" id="stock-search" oninput="stockCurrentPage=1; renderStockTable();" placeholder="Cari Kode, Nama, Buyer, Rak (Contoh: RAK-A3)...">
+                        <input type="text" id="stock-search" oninput="stockCurrentPage=1; renderStockTable();" placeholder="Cari Kode, Nama, Buyer, Rak...">
                     </div>
                     <div class="sap-field">
                         <label>Buyer Filter</label>
-                        <input type="text" id="stock-buyer-filter" oninput="stockCurrentPage=1; renderStockTable();" placeholder="Cari Nama Buyer (Ketik Manual)...">
+                        <input type="text" id="stock-buyer-filter" oninput="stockCurrentPage=1; renderStockTable();" placeholder="Cari Nama Buyer...">
                     </div>
                     <div style="display: flex; gap: 4px; flex-wrap:wrap;">
-                        <button class="sap-btn" onclick="openScannerModal('stock-search')">📷 Scan Barcode/Rak</button>
-                        <button class="sap-btn" onclick="renderStockTable()">🔄 Refresh Stock</button>
-                        <button class="sap-btn" onclick="exportCSV('stock')">📥 Export CSV</button>
+                        <button class="sap-btn" onclick="openScannerModal('stock-search')">📷 Scan</button>
+                        <button class="sap-btn" onclick="renderStockTable()">🔄 Refresh</button>
+                        <button class="sap-btn" onclick="exportCSV('stock')">📥 Export</button>
                     </div>
                 </div>
 
@@ -1258,7 +1278,6 @@
     let cloudReady = false;
     let cloudSaveQueue = Promise.resolve();
 
-    // Variable Pagination untuk Master, Stock, & Mutasi (20 item per halaman)
     const ITEMS_PER_PAGE = 20;
     let masterCurrentPage = 1;
     let stockCurrentPage = 1;
