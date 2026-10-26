@@ -130,12 +130,7 @@
             white-space: nowrap;
         }
 
-        .sap-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .sap-btn:active:not(:disabled) {
+        .sap-btn:active {
             border-color: var(--sap-border-dark) var(--sap-border-light) var(--sap-border-light) var(--sap-border-dark);
             padding: 3px 7px 1px 9px;
             background: #c0c0c0;
@@ -287,30 +282,6 @@
             border: 1px solid #aaa;
             padding: 1px 2px;
             box-sizing: border-box;
-        }
-
-        /* Pagination Bar */
-        .sap-pagination {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #ece9d8;
-            padding: 4px 8px;
-            border: 1px solid var(--sap-border-mid);
-            border-top: none;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .sap-pagination-info {
-            font-weight: bold;
-            color: #333;
-        }
-
-        .sap-pagination-controls {
-            display: flex;
-            align-items: center;
-            gap: 4px;
         }
 
         /* Status Bar */
@@ -649,43 +620,20 @@
 
             <div class="sap-panel" style="margin-top: 8px;">
                 <div class="sap-panel-title">Daftar Master Material (MM60 Data List) — Terurut Kode Material</div>
-                
-                <!-- MENU SEARCH MASTER DATA -->
-                <div class="sap-form-grid" style="margin-bottom: 6px;">
-                    <div class="sap-field" style="grid-column: span 2;">
-                        <label style="width: 120px;">🔍 Cari Material</label>
-                        <input type="text" id="mm-search-input" oninput="onMasterSearchInput()" placeholder="Cari Kode Material, Deskripsi, atau Buyer...">
-                    </div>
-                    <div style="display: flex; gap: 4px; align-items: center;">
-                        <button type="button" class="sap-btn" onclick="clearMasterSearch()">🔄 Reset Search</button>
-                    </div>
-                </div>
-
-                <div class="sap-grid-container" style="max-height: 380px;">
+                <div class="sap-grid-container" style="max-height: 320px;">
                     <table class="sap-grid">
                         <thead>
                             <tr>
-                                <th style="width: 35px; text-align: center;">No</th>
                                 <th>Kode Material</th>
                                 <th>Deskripsi Material</th>
                                 <th>Buyer</th>
                                 <th>Satuan</th>
-                                <th style="text-align: right;">Reorder Level</th>
-                                <th style="width: 120px; text-align: center;">Aksi</th>
+                                <th>Reorder Level</th>
+                                <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="grid-master-body"></tbody>
                     </table>
-                </div>
-
-                <!-- PAGINASI 20 ITEM PER HALAMAN -->
-                <div class="sap-pagination">
-                    <div class="sap-pagination-info" id="mm-pagination-info">Menampilkan 0 - 0 dari 0 Item</div>
-                    <div class="sap-pagination-controls">
-                        <button type="button" class="sap-btn" id="mm-btn-prev" onclick="prevMasterPage()">◀ Prev</button>
-                        <span id="mm-page-display" style="font-weight: bold; margin: 0 6px;">Hal 1 / 1</span>
-                        <button type="button" class="sap-btn" id="mm-btn-next" onclick="nextMasterPage()">Next ▶</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1218,7 +1166,7 @@
         { docNum: "7000000001", date: "2026-10-15", mvt: "701", code: "MAT-1001", desc: "Kain Katun Combed 30S", style: "-", sloc: "RAK-A1", partner: "Auditor Gudang", ref: "PHYS-OPNAME-RAK-A1", qty: 5, uom: "KG", text: "Opname Adjustment: Surplus +5 KG" }
     ];
 
-    // Firebase configuration
+    // Firebase configuration provided by the owner of this project.
     const firebaseConfig = {
         apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
         authDomain: "inventory-gudang-16dfe.firebaseapp.com",
@@ -1242,11 +1190,6 @@
     let cloudReady = false;
     let cloudSaveQueue = Promise.resolve();
 
-    // Variable State Pagination & Search Master Data
-    let mmCurrentPage = 1;
-    const mmItemsPerPage = 20;
-    let mmSearchQuery = '';
-
     const CLOUD_COLLECTIONS = {
         materials: 'ig_materials',
         mutasi: 'ig_mutasi',
@@ -1254,6 +1197,7 @@
         opnameHistory: 'ig_opnameHistory'
     };
 
+    // Simpan array per dokumen agar tidak menumpuk seluruh riwayat dalam satu dokumen Firestore.
     async function replaceCloudCollection(collectionName, rows, idField) {
         const ref = db.collection(collectionName);
         const oldDocs = await ref.get();
@@ -1269,6 +1213,7 @@
                 const index = i + offset;
                 const safeRow = JSON.parse(JSON.stringify(row));
                 const docId = String(safeRow[idField] ?? `${index}`).replaceAll('/', '_').slice(0, 120) || String(index);
+                // Prefix index preserves the current list order when loading again.
                 batch.set(ref.doc(`${String(index).padStart(8, '0')}_${docId}`), { ...safeRow, _order: index });
             });
             await batch.commit();
@@ -1308,6 +1253,7 @@
             purchaseOrders = cloudPO;
             opnameHistory = cloudOpname;
         } else {
+            // First run: preserve existing browser data. If there is none, use the HTML's sample defaults.
             const hasLocalData = ['sap_materials','sap_mutasi','sap_purchase_orders','sap_opname_history']
                 .some(key => localStorage.getItem(key) !== null);
             if (!hasLocalData) {
@@ -1331,13 +1277,14 @@
 
     window.addEventListener('DOMContentLoaded', async () => {
         try {
+            // Anonymous auth must be enabled in Firebase Console > Authentication > Sign-in method.
             await auth.signInAnonymously();
             await loadCloudOrMigrateLocal();
             showStatus('Terhubung ke Firebase: inventory-gudang-16dfe', 'S');
         } catch (err) {
             console.error('Firebase init/load error:', err);
             showStatus('Firebase belum terhubung. Periksa Anonymous Auth dan Firestore Rules.', 'E');
-            alert('Tidak dapat memuat data Firebase. Periksa koneksi internet. Detail: ' + (err.message || err.code || err));
+            alert('Tidak dapat memuat data Firebase. Periksa koneksi internet, aktifkan Anonymous Authentication, dan pasang Firestore Rules yang sesuai. Detail: ' + (err.message || err.code || err));
         }
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('gr-date').value = today;
@@ -1373,6 +1320,7 @@
     function updateGlobalDatalist() {
         const datalist = document.getElementById('global-material-list');
         datalist.innerHTML = '';
+        // Urutkan dropdown datalist berdasarkan Kode Material
         const sorted = [...materials].sort((a, b) => a.code.localeCompare(b.code));
         sorted.forEach(m => {
             const option = document.createElement('option');
@@ -1439,105 +1387,291 @@
         document.getElementById('tcode-input').value = '';
     }
 
-    /* RENDER MASTER MATERIAL DATA (MM60) DENGAN PAGINASI 20 ITEM & MENU SEARCH */
-    function onMasterSearchInput() {
-        mmSearchQuery = document.getElementById('mm-search-input').value.toLowerCase().trim();
-        mmCurrentPage = 1; // Kembali ke halaman 1 saat pengetikan search
-        renderMasterTable();
-    }
-
-    function clearMasterSearch() {
-        document.getElementById('mm-search-input').value = '';
-        mmSearchQuery = '';
-        mmCurrentPage = 1;
-        renderMasterTable();
-    }
-
-    function renderMasterTable() {
-        const tbody = document.getElementById('grid-master-body');
+    function initPrintBarcodeModule() {
+        const tbody = document.getElementById('grid-print-sloc-body');
         if (!tbody) return;
         tbody.innerHTML = '';
-        
-        // Filter berdasarkan pencarian
-        let filteredMaterials = [...materials];
-        if (mmSearchQuery !== '') {
-            filteredMaterials = filteredMaterials.filter(mat => 
-                (mat.code && mat.code.toLowerCase().includes(mmSearchQuery)) ||
-                (mat.desc && mat.desc.toLowerCase().includes(mmSearchQuery)) ||
-                (mat.buyer && mat.buyer.toLowerCase().includes(mmSearchQuery))
-            );
+
+        const slocMap = {};
+        mutasiLog.forEach(log => {
+            if (log.sloc && log.sloc !== '-') {
+                const sloc = log.sloc.trim().toUpperCase();
+                if (!slocMap[sloc]) slocMap[sloc] = new Set();
+                slocMap[sloc].add(log.code);
+            }
+        });
+
+        const uniqueSlocs = Object.keys(slocMap).sort();
+
+        uniqueSlocs.forEach((sloc) => {
+            const codes = Array.from(slocMap[sloc]);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="text-align: center;"><input type="checkbox" class="sloc-checkbox" value="${sloc}"></td>
+                <td><strong>${sloc}</strong></td>
+                <td style="text-align: center;">${codes.length} Transaksi/Material</td>
+                <td>${codes.join(', ')}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        if (uniqueSlocs.length > 0) previewSingleBarcode(uniqueSlocs[0]);
+    }
+
+    function toggleSelectAllSloc(masterChk) {
+        document.querySelectorAll('.sloc-checkbox').forEach(chk => chk.checked = masterChk.checked);
+    }
+
+    function previewSingleBarcode(text) {
+        try {
+            JsBarcode("#barcode-element", text, { format: "CODE128", lineColor: "#000", width: 2, height: 55, displayValue: true });
+            document.getElementById('barcode-label-text').innerText = text;
+        } catch (e) { console.error(e); }
+    }
+
+    function generatePrintSheet(slocList) {
+        const container = document.getElementById('print-sheet-container');
+        container.innerHTML = '';
+        if (slocList.length === 0) { alert('Pilih minimal satu lokasi rak untuk dicetak!'); return false; }
+
+        slocList.forEach((sloc, index) => {
+            const card = document.createElement('div');
+            card.className = 'print-label-card';
+            card.innerHTML = `
+                <div style="font-size: 11px; font-weight: bold; color: #000080; margin-bottom: 4px; text-transform: uppercase;">GARMENT WAREHOUSE LOCATION</div>
+                <div style="margin: 6px 0;"><svg id="print-barcode-${index}"></svg></div>
+                <div style="font-size: 10px; color: #333; border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
+                    <b>Area / Lokasi Rak Gudang Resmi</b>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        slocList.forEach((sloc, index) => {
+            try {
+                JsBarcode(`#print-barcode-${index}`, sloc, { format: "CODE128", lineColor: "#000", width: 2.5, height: 60, displayValue: true, fontSize: 14 });
+            } catch(e) { console.error(e); }
+        });
+        return true;
+    }
+
+    function printSelectedBarcodes() {
+        const slocs = Array.from(document.querySelectorAll('.sloc-checkbox:checked')).map(chk => chk.value);
+        if (generatePrintSheet(slocs)) window.print();
+    }
+
+    function printAllBarcodes() {
+        const slocSet = new Set();
+        mutasiLog.forEach(log => { if (log.sloc && log.sloc !== '-') slocSet.add(log.sloc.trim().toUpperCase()); });
+        if (generatePrintSheet(Array.from(slocSet))) window.print();
+    }
+
+    function openScannerModal(targetType) {
+        activeScannerTarget = targetType;
+        document.getElementById('modal-scanner').style.display = 'flex';
+        document.getElementById('scanner-result-info').innerText = "Arahkan kamera ke barcode material atau rak...";
+
+        setTimeout(() => {
+            if (!html5QrcodeScanner) html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, onScanFailure)
+            .catch(err => { document.getElementById('scanner-result-info').innerText = "Gagal mengakses kamera perangkat."; });
+        }, 300);
+    }
+
+    function closeScannerModal() {
+        if (html5QrcodeScanner) html5QrcodeScanner.stop().then(() => html5QrcodeScanner.clear()).catch(err => {});
+        document.getElementById('modal-scanner').style.display = 'none';
+    }
+
+    function onScanSuccess(decodedText) {
+        const cleanText = decodedText.trim().toUpperCase();
+        document.getElementById('scanner-result-info').innerText = `Berhasil Scan: ${cleanText}`;
+        closeScannerModal();
+
+        if (activeScannerTarget === 'stock-search') {
+            document.getElementById('stock-search').value = cleanText;
+            renderStockTable();
+        } else if (activeScannerTarget === 'opname-sloc') {
+            document.getElementById('opname-sloc').value = cleanText;
+            loadOpnameItems();
+        } else if (activeScannerTarget === 'gr-line' || activeScannerTarget === 'gi-line') {
+            const type = activeScannerTarget === 'gr-line' ? 'gr' : 'gi';
+            const tbody = document.getElementById(`rows-migo-${type}`);
+            let lastRow = tbody.lastElementChild;
+            if (!lastRow || lastRow.querySelector('.migo-mat-input').value.trim() !== '') {
+                addMigoRow(type);
+                lastRow = tbody.lastElementChild;
+            }
+            const inputMat = lastRow.querySelector('.migo-mat-input');
+            inputMat.value = cleanText;
+            if (type === 'gr') onMigoMaterialInput(inputMat);
+            else onMigoGiMaterialInput(inputMat);
         }
+    }
 
-        // Urutkan alfabetis berdasarkan Kode Material
-        filteredMaterials.sort((a, b) => a.code.localeCompare(b.code));
+    function onScanFailure(error) {}
 
-        const totalItems = filteredMaterials.length;
-        const totalPages = Math.ceil(totalItems / mmItemsPerPage) || 1;
+    /* FITUR MODUL STOK OPNAME (PHYSICAL INVENTORY) */
+    function loadOpnameItems() {
+        const sloc = document.getElementById('opname-sloc').value.trim().toUpperCase();
+        if (!sloc) { alert('Harap isi atau scan lokasi rak (SLoc) terlebih dahulu!'); return; }
 
-        if (mmCurrentPage > totalPages) mmCurrentPage = totalPages;
-        if (mmCurrentPage < 1) mmCurrentPage = 1;
+        const stockBySLoc = calculateCurrentStockMapBySLoc();
+        const tbody = document.getElementById('grid-opname-body');
+        tbody.innerHTML = '';
 
-        const startIndex = (mmCurrentPage - 1) * mmItemsPerPage;
-        const endIndex = Math.min(startIndex + mmItemsPerPage, totalItems);
+        let foundCount = 0;
+        // Urutkan material saat load stok opname
+        const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
+        sortedMaterials.forEach(mat => {
+            const key = `${mat.code}__${sloc}`;
+            const bookQty = stockBySLoc[key] !== undefined ? stockBySLoc[key] : 0;
 
-        const pageData = filteredMaterials.slice(startIndex, endIndex);
-
-        if (pageData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 15px; color:#666;">Data material tidak ditemukan.</td></tr>`;
-        } else {
-            pageData.forEach((mat, idx) => {
+            if (stockBySLoc[key] !== undefined && stockBySLoc[key] !== 0) {
+                foundCount++;
                 const tr = document.createElement('tr');
+                tr.setAttribute('data-code', mat.code);
+                tr.setAttribute('data-uom', mat.uom);
+                tr.setAttribute('data-book', bookQty);
+
                 tr.innerHTML = `
-                    <td style="text-align: center;">${startIndex + idx + 1}</td>
+                    <td style="text-align:center;">${foundCount}</td>
                     <td><strong>${mat.code}</strong></td>
                     <td>${mat.desc}</td>
-                    <td>${mat.buyer}</td>
                     <td>${mat.uom}</td>
-                    <td style="text-align:right;">${mat.reorder || 0}</td>
-                    <td style="text-align:center;">
-                        <button class="sap-btn" onclick="editMaterial('${mat.code}')">✏️ Edit</button>
-                        <button class="sap-btn sap-btn-red" onclick="deleteMaterial('${mat.code}')">🗑️ Hapus</button>
-                    </td>
+                    <td style="text-align:right; font-weight:bold; background:#f9f9f9;">${bookQty.toLocaleString('id-ID')}</td>
+                    <td><input type="number" class="opname-counted-input" value="${bookQty}" step="any" min="0" oninput="calculateOpnameVariance(this)" style="text-align:right; font-weight:bold; color:blue;"></td>
+                    <td class="opname-variance-cell" style="text-align:right; font-weight:bold;">0</td>
+                    <td class="opname-status-cell"><span style="color:green; font-weight:bold;">✅ Sesuai</span></td>
                 `;
                 tbody.appendChild(tr);
-            });
-        }
+            }
+        });
 
-        // Update Info Pagination Bar
-        const infoEl = document.getElementById('mm-pagination-info');
-        const pageEl = document.getElementById('mm-page-display');
-        const btnPrev = document.getElementById('mm-btn-prev');
-        const btnNext = document.getElementById('mm-btn-next');
-
-        if (infoEl) {
-            if (totalItems === 0) infoEl.innerText = `Menampilkan 0 - 0 dari 0 Item`;
-            else infoEl.innerText = `Menampilkan ${startIndex + 1} - ${endIndex} dari ${totalItems} Item`;
-        }
-        if (pageEl) pageEl.innerText = `Hal ${mmCurrentPage} / ${totalPages}`;
-        if (btnPrev) btnPrev.disabled = (mmCurrentPage <= 1);
-        if (btnNext) btnNext.disabled = (mmCurrentPage >= totalPages);
-    }
-
-    function prevMasterPage() {
-        if (mmCurrentPage > 1) {
-            mmCurrentPage--;
-            renderMasterTable();
+        if (foundCount === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:15px; color:#cc0000; font-weight:bold;">Tidak ada material aktif yang tercatat di rak [${sloc}].</td></tr>`;
+        } else {
+            showStatus(`Loaded ${foundCount} material(s) for Opname at SLoc [${sloc}]`);
         }
     }
 
-    function nextMasterPage() {
-        const filteredLength = materials.filter(mat => 
-            !mmSearchQuery ||
-            (mat.code && mat.code.toLowerCase().includes(mmSearchQuery)) ||
-            (mat.desc && mat.desc.toLowerCase().includes(mmSearchQuery)) ||
-            (mat.buyer && mat.buyer.toLowerCase().includes(mmSearchQuery))
-        ).length;
+    function calculateOpnameVariance(inputElem) {
+        const tr = inputElem.closest('tr');
+        const bookQty = parseFloat(tr.getAttribute('data-book')) || 0;
+        const countedQty = parseFloat(inputElem.value) || 0;
+        const variance = countedQty - bookQty;
 
-        const totalPages = Math.ceil(filteredLength / mmItemsPerPage) || 1;
-        if (mmCurrentPage < totalPages) {
-            mmCurrentPage++;
-            renderMasterTable();
+        const varCell = tr.querySelector('.opname-variance-cell');
+        const statusCell = tr.querySelector('.opname-status-cell');
+
+        varCell.innerText = variance.toLocaleString('id-ID');
+
+        if (variance === 0) {
+            varCell.style.color = 'black';
+            statusCell.innerHTML = `<span style="color:green; font-weight:bold;">✅ Sesuai</span>`;
+        } else if (variance > 0) {
+            varCell.style.color = 'green';
+            statusCell.innerHTML = `<span style="color:green; font-weight:bold;">📈 Surplus (+${variance})</span>`;
+        } else {
+            varCell.style.color = 'red';
+            statusCell.innerHTML = `<span style="color:red; font-weight:bold;">📉 Defisit (${variance})</span>`;
         }
+    }
+
+    function postOpnameAdjustment() {
+        const sloc = document.getElementById('opname-sloc').value.trim().toUpperCase();
+        const date = document.getElementById('opname-date').value || new Date().toISOString().slice(0,10);
+        const user = document.getElementById('opname-user').value.trim() || 'Opname Team';
+        const rows = document.querySelectorAll('#grid-opname-body tr[data-code]');
+        if (!sloc) { alert('Harap isi kode lokasi rak!'); return; }
+        if (!rows.length) { alert('Tidak ada data material untuk diposting!'); return; }
+        if (!confirm('Simpan hasil opname ke riwayat laporan dan posting penyesuaian jika ada selisih?')) return;
+        const nextDocNum = (7000000000 + mutasiLog.length + 1).toString();
+        let adjustmentCount = 0;
+        rows.forEach(tr => {
+            const code = tr.getAttribute('data-code'), uom = tr.getAttribute('data-uom');
+            const bookQty = parseFloat(tr.getAttribute('data-book')) || 0;
+            const countedQty = parseFloat(tr.querySelector('.opname-counted-input').value);
+            if (!Number.isFinite(countedQty) || countedQty < 0) return;
+            const variance = countedQty - bookQty;
+            const mat = materials.find(m => m.code === code) || {};
+            opnameHistory.unshift({id:`${Date.now()}-${code}-${sloc}`,date,docNum:nextDocNum,sloc,code,
+                desc:mat.desc||'Material Opname',buyer:mat.buyer||'-',uom,bookQty,countedQty,variance,
+                status:variance===0?'Sesuai':variance>0?'Selisih Lebih':'Selisih Kurang',user});
+            if (variance !== 0) {
+                mutasiLog.unshift({docNum:nextDocNum,date,mvt:variance>0?'701':'702',code,desc:mat.desc||'Material Opname',
+                    style:'-',sloc,partner:user,ref:`PHYS-OPNAME-${sloc}`,qty:Math.abs(variance),uom,
+                    text:`Opname Adjustment: Book=${bookQty}, Count=${countedQty}`});
+                adjustmentCount++;
+            }
+        });
+        localStorage.setItem('sap_opname_history',JSON.stringify(opnameHistory));
+        saveState();
+        alert(`Hasil opname tersimpan. Item diperiksa: ${rows.length}. Item penyesuaian: ${adjustmentCount}.`);
+        resetOpnameForm(); switchTab('report-opname');
+    }
+
+    function getFilteredOpnameHistory() {
+        const start=document.getElementById('report-opname-start')?.value||'';
+        const end=document.getElementById('report-opname-end')?.value||'';
+        const sloc=(document.getElementById('report-opname-sloc')?.value||'').trim().toLowerCase();
+        const q=(document.getElementById('report-opname-search')?.value||'').trim().toLowerCase();
+        return opnameHistory.filter(r=>(!start||r.date>=start)&&(!end||r.date<=end)&&
+            (!sloc||(r.sloc||'').toLowerCase().includes(sloc))&&
+            (!q||[r.code,r.desc,r.buyer,r.user,r.docNum].some(v=>String(v||'').toLowerCase().includes(q))));
+    }
+    function renderOpnameReport() {
+        const tbody=document.getElementById('report-opname-body'); if(!tbody)return;
+        const rows=getFilteredOpnameHistory();
+        document.getElementById('op-r-total').textContent=rows.length;
+        document.getElementById('op-r-match').textContent=rows.filter(r=>r.variance===0).length;
+        document.getElementById('op-r-plus').textContent=rows.filter(r=>r.variance>0).length;
+        document.getElementById('op-r-minus').textContent=rows.filter(r=>r.variance<0).length;
+        if(!rows.length){tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:14px;">Tidak ada data pada filter ini. Simpan hasil melalui menu Stok Opname.</td></tr>';return;}
+        tbody.innerHTML=rows.map(r=>`<tr><td>${r.date||'-'}</td><td>${r.docNum||'-'}</td><td>${r.sloc||'-'}</td>
+        <td><strong>${r.code}</strong></td><td>${r.desc||'-'}</td><td>${r.buyer||'-'}</td><td>${r.uom||'-'}</td>
+        <td style="text-align:right;">${Number(r.bookQty).toLocaleString('id-ID')}</td>
+        <td style="text-align:right;">${Number(r.countedQty).toLocaleString('id-ID')}</td>
+        <td style="text-align:right;color:${r.variance>0?'green':r.variance<0?'red':'black'};font-weight:bold;">${Number(r.variance).toLocaleString('id-ID')}</td>
+        <td>${r.status}</td><td>${r.user||'-'}</td></tr>`).join('');
+    }
+    function printOpnameReport() {
+        const rows=getFilteredOpnameHistory(); if(!rows.length){alert('Tidak ada data untuk dicetak.');return;}
+        const body=rows.map(r=>`<tr><td>${r.date}</td><td>${r.sloc}</td><td>${r.code}</td><td>${r.desc}</td><td>${r.buyer}</td><td>${r.uom}</td><td>${r.bookQty}</td><td>${r.countedQty}</td><td>${r.variance}</td><td>${r.status}</td><td>${r.user}</td></tr>`).join('');
+        const w=window.open('','_blank'); if(!w){alert('Izinkan pop-up browser untuk mencetak laporan.');return;}
+        w.document.write(`<html><head><title>Report Hasil Stok Opname</title><style>body{font:12px Arial;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}</style></head><body><h2>REPORT HASIL STOK OPNAME</h2><table><thead><tr><th>Tanggal</th><th>Rak</th><th>Kode</th><th>Deskripsi</th><th>Buyer</th><th>UoM</th><th>Stok Sistem</th><th>Fisik</th><th>Selisih</th><th>Status</th><th>Petugas</th></tr></thead><tbody>${body}</tbody></table></body></html>`);
+        w.document.close();w.focus();w.print();
+    }
+
+    function resetOpnameForm() {
+        document.getElementById('opname-sloc').value = '';
+        document.getElementById('opname-user').value = '';
+        document.getElementById('grid-opname-body').innerHTML = `<tr><td colspan="8" style="text-align:center; padding:15px; color:#666;">Pilih/Scan Rak dan klik tombol "Load Data Material di Rak" untuk memulai Opname.</td></tr>`;
+    }
+
+    /* RENDER TABEL MASTER MATERIAL (MM60) DENGAN PENGURUTAN BERDASARKAN KODE MATERIAL */
+    function renderMasterTable() {
+        const tbody = document.getElementById('grid-master-body');
+        tbody.innerHTML = '';
+        
+        // Urutkan array materials secara alfabetis berdasarkan Kode Material (A-Z)
+        const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
+
+        sortedMaterials.forEach((mat) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${mat.code}</strong></td>
+                <td>${mat.desc}</td>
+                <td>${mat.buyer}</td>
+                <td>${mat.uom}</td>
+                <td style="text-align:right;">${mat.reorder || 0}</td>
+                <td>
+                    <button class="sap-btn" onclick="editMaterial('${mat.code}')">✏️ Edit</button>
+                    <button class="sap-btn sap-btn-red" onclick="deleteMaterial('${mat.code}')">🗑️ Hapus</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
 
     function saveMaterialMaster(event) {
@@ -1566,7 +1700,6 @@
         document.getElementById('mm-buyer').value = mat.buyer || '';
         document.getElementById('mm-uom').value = mat.uom;
         document.getElementById('mm-reorder').value = mat.reorder || 0;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function deleteMaterial(code) {
@@ -1580,163 +1713,6 @@
 
     function resetMasterForm() { document.getElementById('form-master-material').reset(); }
 
-    /* DASHBOARD LOGIC */
-    function renderDashboard() {
-        document.getElementById('dash-total-material').innerText = materials.length;
-        const buyers = [...new Set(materials.map(m => m.buyer || 'General'))];
-        document.getElementById('dash-total-buyer').innerText = buyers.length;
-
-        const stockMap = calculateCurrentStockMap();
-        let reorderCount = 0;
-        let safeCount = 0;
-        const reorderBody = document.getElementById('dashboard-reorder-body');
-        reorderBody.innerHTML = '';
-
-        materials.forEach(m => {
-            const currentStock = stockMap[m.code] || 0;
-            const isReorder = currentStock <= (m.reorder || 0);
-            if (isReorder) reorderCount++; else safeCount++;
-
-            if (isReorder) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${m.code}</strong></td>
-                    <td>${m.desc}</td>
-                    <td>${m.buyer}</td>
-                    <td style="text-align:right; font-weight:bold; color:red;">${currentStock.toLocaleString('id-ID')}</td>
-                    <td style="text-align:right;">${m.reorder || 0}</td>
-                    <td><span class="dash-alert">⚠️ Reorder</span></td>
-                `;
-                reorderBody.appendChild(tr);
-            }
-        });
-
-        if (reorderCount === 0) {
-            reorderBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:green; padding:10px;">✅ Seluruh stok aman (di atas Reorder Level).</td></tr>`;
-        }
-
-        document.getElementById('dash-reorder-count').innerText = reorderCount;
-        document.getElementById('dash-safe-count').innerText = safeCount;
-
-        // Buyer Chart
-        const chartContainer = document.getElementById('dashboard-buyer-chart');
-        chartContainer.innerHTML = '';
-
-        if (materials.length === 0) {
-            chartContainer.innerHTML = '<div style="color:#666">Belum ada data material.</div>';
-        } else {
-            const buyerCounts = {};
-            materials.forEach(m => {
-                const b = m.buyer || 'General';
-                buyerCounts[b] = (buyerCounts[b] || 0) + 1;
-            });
-
-            Object.keys(buyerCounts).forEach(buyer => {
-                const count = buyerCounts[buyer];
-                const pct = Math.round((count / materials.length) * 100);
-                const row = document.createElement('div');
-                row.className = 'buyer-bar-row';
-                row.innerHTML = `
-                    <div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${buyer}</div>
-                    <div class="buyer-bar-track"><div class="buyer-bar-fill" style="width:${pct}%;"></div></div>
-                    <div class="buyer-bar-value">${count} mat (${pct}%)</div>
-                `;
-                chartContainer.appendChild(row);
-            });
-        }
-    }
-
-    /* CALCULATION HELPER FUNCTIONS */
-    function calculateCurrentStockMap() {
-        const map = {};
-        mutasiLog.forEach(log => {
-            const code = log.code;
-            const qty = parseFloat(log.qty) || 0;
-            if (!map[code]) map[code] = 0;
-
-            if (log.mvt === '101' || log.mvt === '701') map[code] += qty;
-            else if (log.mvt === '201' || log.mvt === '702') map[code] -= qty;
-        });
-        return map;
-    }
-
-    function calculateCurrentStockMapBySLoc() {
-        const map = {};
-        mutasiLog.forEach(log => {
-            const code = log.code;
-            const sloc = (log.sloc || '-').trim().toUpperCase();
-            const key = `${code}__${sloc}`;
-            const qty = parseFloat(log.qty) || 0;
-            if (map[key] === undefined) map[key] = 0;
-
-            if (log.mvt === '101' || log.mvt === '701') map[key] += qty;
-            else if (log.mvt === '201' || log.mvt === '702') map[key] -= qty;
-        });
-        return map;
-    }
-
-    /* STOK OVERVIEW (MMBE) */
-    function renderStockTable() {
-        const tbody = document.getElementById('grid-stock-body');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
-        const filterSearch = document.getElementById('stock-search').value.toLowerCase().trim();
-        const filterBuyer = document.getElementById('stock-buyer-filter').value.toLowerCase().trim();
-
-        const stockTotalMap = calculateCurrentStockMap();
-        const stockSLocMap = calculateCurrentStockMapBySLoc();
-
-        const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
-
-        sortedMaterials.forEach(m => {
-            const totalStock = stockTotalMap[m.code] || 0;
-
-            // Kumpulkan Info Rak
-            const slocEntries = [];
-            Object.keys(stockSLocMap).forEach(key => {
-                if (key.startsWith(`${m.code}__`)) {
-                    const sloc = key.split('__')[1];
-                    const q = stockSLocMap[key];
-                    if (q > 0) slocEntries.push(`${sloc}: ${q.toLocaleString('id-ID')}`);
-                }
-            });
-
-            const slocText = slocEntries.length > 0 ? slocEntries.join(' | ') : 'Belum Ada Lokasi';
-
-            // Filter match check
-            const matchSearch = !filterSearch || 
-                m.code.toLowerCase().includes(filterSearch) || 
-                m.desc.toLowerCase().includes(filterSearch) || 
-                m.buyer.toLowerCase().includes(filterSearch) || 
-                slocText.toLowerCase().includes(filterSearch);
-
-            const matchBuyer = !filterBuyer || m.buyer.toLowerCase().includes(filterBuyer);
-
-            if (matchSearch && matchBuyer) {
-                const tr = document.createElement('tr');
-                const isReorder = totalStock <= (m.reorder || 0);
-                const statusHtml = isReorder 
-                    ? `<span class="badge-mvt mvt-gi">⚠️ Reorder (${totalStock} <= ${m.reorder || 0})</span>`
-                    : `<span class="badge-mvt mvt-gr">✅ Aman</span>`;
-
-                tr.innerHTML = `
-                    <td><strong>${m.code}</strong></td>
-                    <td>${m.buyer}</td>
-                    <td>${m.desc}</td>
-                    <td>${m.uom}</td>
-                    <td style="text-align:right; font-weight:bold;">${totalStock.toLocaleString('id-ID')}</td>
-                    <td>${slocText}</td>
-                    <td style="text-align:right;">${m.reorder || 0}</td>
-                    <td>${statusHtml}</td>
-                    <td style="text-align:center;"><button class="sap-btn" onclick="openLedgerModal('${m.code}')">📖 Ledger</button></td>
-                `;
-                tbody.appendChild(tr);
-            }
-        });
-    }
-
-    /* MIGO GOODS RECEIPT / ISSUE LOGIC */
     function addMigoRow(type) {
         const tbody = document.getElementById(`rows-migo-${type}`);
         const itemCount = (tbody.children.length + 1) * 10;
@@ -1794,335 +1770,354 @@
             const stockBySLoc = calculateCurrentStockMapBySLoc();
             let matchedSloc = '', maxQty = -999;
             Object.keys(stockBySLoc).forEach(key => {
-                if (key.startsWith(`${mat.code}__`)) {
-                    const q = stockBySLoc[key];
-                    if (q > maxQty && q > 0) { maxQty = q; matchedSloc = key.split('__')[1]; }
+                const [mCode, slocName] = key.split('__');
+                if (mCode === mat.code && stockBySLoc[key] > maxQty) {
+                    maxQty = stockBySLoc[key];
+                    matchedSloc = slocName;
                 }
             });
-            tr.querySelector('.migo-sloc').value = matchedSloc || 'RAK-DEF';
+            tr.querySelector('.migo-sloc').value = matchedSloc || '';
+        } else {
+            tr.querySelector('.migo-desc').value = '';
+            tr.querySelector('.migo-uom').value = '';
+            tr.querySelector('.migo-sloc').value = '';
         }
     }
 
     function postMigoDocument(mvtType) {
-        const type = mvtType === '101' ? 'gr' : 'gi';
+        const type = (mvtType === '101') ? 'gr' : 'gi';
         const ref = document.getElementById(`${type}-ref`).value.trim();
         const partner = document.getElementById(`${type}-partner`).value.trim();
-        const date = document.getElementById(`${type}-date`).value || new Date().toISOString().slice(0, 10);
+        const date = document.getElementById(`${type}-date`).value;
         const headerNote = document.getElementById(`${type}-header-note`).value.trim();
 
         const rows = document.querySelectorAll(`#rows-migo-${type} tr`);
-        if (rows.length === 0) { alert('Harap isi minimal 1 baris item!'); return; }
+        if (rows.length === 0) { alert('Harap tambahkan minimal 1 baris material!'); return; }
 
-        const nextDocNum = (5000000000 + mutasiLog.length + 1).toString();
-        let validLines = 0;
+        const currentStocks = calculateCurrentStockMapBySLoc();
+        let itemsToPost = [], isValid = true;
 
-        rows.forEach(tr => {
-            const code = tr.querySelector('.migo-mat-input').value.trim().toUpperCase();
-            const desc = tr.querySelector('.migo-desc').value.trim();
+        rows.forEach((tr, idx) => {
+            const matCode = tr.querySelector('.migo-mat-input').value.trim().toUpperCase();
+            const desc = tr.querySelector('.migo-desc').value;
             const style = tr.querySelector('.migo-style').value.trim() || '-';
             const qty = parseFloat(tr.querySelector('.migo-qty').value) || 0;
             const uom = tr.querySelector('.migo-uom').value;
-            const sloc = tr.querySelector('.migo-sloc').value.trim().toUpperCase() || 'RAK-MAIN';
-            const text = tr.querySelector('.migo-text').value.trim();
+            const sloc = tr.querySelector('.migo-sloc').value.trim().toUpperCase();
+            const itemText = tr.querySelector('.migo-text').value;
 
-            if (code && qty > 0) {
-                validLines++;
-                mutasiLog.unshift({
-                    docNum: nextDocNum, date, mvt: mvtType, code, desc, style, sloc,
-                    partner: partner || (mvtType === '101' ? 'Supplier' : 'Production'),
-                    ref, qty, uom, text: text || headerNote
-                });
+            const matCheck = materials.find(m => m.code.toUpperCase() === matCode);
+            if (!matCheck) { alert(`Baris ${idx + 1}: Kode Material tidak valid!`); isValid = false; return; }
+            if (qty <= 0) { alert(`Baris ${idx + 1}: Qty harus > 0!`); isValid = false; return; }
+            if (!sloc) { alert(`Baris ${idx + 1}: Rak (SLoc) wajib diisi!`); isValid = false; return; }
+
+            if (mvtType === '201' && qty > (currentStocks[`${matCheck.code}__${sloc}`] || 0)) {
+                alert(`Baris ${idx + 1}: Stok di rak [${sloc}] tidak mencukupi!`); isValid = false; return;
             }
+
+            itemsToPost.push({ code: matCheck.code, desc: desc || matCheck.desc, style, sloc, qty, uom: uom || matCheck.uom, text: itemText || headerNote });
         });
 
-        if (validLines === 0) { alert('Harap masukkan Kode Material dan Qty yang valid (>0)!'); return; }
+        if (!isValid) return;
+
+        const nextDocNum = 5000000000 + mutasiLog.length + 1;
+        itemsToPost.forEach(item => {
+            mutasiLog.unshift({ docNum: nextDocNum.toString(), date, mvt: mvtType, code: item.code, desc: item.desc, style: item.style, sloc: item.sloc, partner: partner || 'General', ref: ref || '-', qty: item.qty, uom: item.uom, text: item.text });
+        });
 
         saveState();
-        alert(`Dokumen [${nextDocNum}] berhasil diposting dengan ${validLines} item!`);
+        document.getElementById(`${type}-ref`).value = '';
+        document.getElementById(`${type}-partner`).value = '';
         document.getElementById(`rows-migo-${type}`).innerHTML = '';
         addMigoRow(type);
-        switchTab('mb51');
+
+        alert(`Dokumen Material [${nextDocNum}] BERHASIL diposting!`);
+        switchTab('mmbe');
     }
 
-    /* PURCHASE ORDER (ME21N / ME2N) LOGIC */
-    function addPORow() {
-        const tbody = document.getElementById('po-item-rows');
-        const itemCount = (tbody.children.length + 1) * 10;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td style="text-align:center;">${itemCount}</td>
-            <td><input type="text" list="global-material-list" oninput="onPOMaterialInput(this)" class="po-mat-code" placeholder="Kode..." style="text-transform:uppercase;"></td>
-            <td><input type="text" class="po-mat-desc" placeholder="Deskripsi"></td>
-            <td><input type="text" class="po-mat-buyer" placeholder="Buyer"></td>
-            <td><input type="number" class="po-mat-qty" min="1" value="1" oninput="calculatePOTotals()" style="text-align:right;"></td>
-            <td><input type="text" class="po-mat-uom" value="PCS" style="text-align:center;"></td>
-            <td><input type="number" class="po-mat-price" min="0" value="0" oninput="calculatePOTotals()" style="text-align:right;"></td>
-            <td class="po-mat-total" style="text-align:right; font-weight:bold;">0</td>
-            <td><input type="text" class="po-mat-note" placeholder="Catatan item"></td>
-            <td style="text-align:center;"><button class="sap-btn sap-btn-red" onclick="this.closest('tr').remove(); calculatePOTotals();">X</button></td>
-        `;
-        tbody.appendChild(tr);
-    }
-
-    function onPOMaterialInput(inputElem) {
-        const val = inputElem.value.trim().toUpperCase();
-        const tr = inputElem.closest('tr');
-        const mat = materials.find(m => m.code.toUpperCase() === val);
-        if (mat) {
-            tr.querySelector('.po-mat-desc').value = mat.desc;
-            tr.querySelector('.po-mat-buyer').value = mat.buyer;
-            tr.querySelector('.po-mat-uom').value = mat.uom;
-        }
-    }
-
-    function calculatePOTotals() {
-        let grandTotal = 0;
-        document.querySelectorAll('#po-item-rows tr').forEach(tr => {
-            const qty = parseFloat(tr.querySelector('.po-mat-qty').value) || 0;
-            const price = parseFloat(tr.querySelector('.po-mat-price').value) || 0;
-            const total = qty * price;
-            tr.querySelector('.po-mat-total').innerText = total.toLocaleString('id-ID');
-            grandTotal += total;
-        });
-        document.getElementById('po-grand-total').innerText = grandTotal.toLocaleString('id-ID');
-    }
-
-    function savePurchaseOrder() {
-        const supplier = document.getElementById('po-supplier').value.trim();
-        const date = document.getElementById('po-date').value;
-        const deliveryDate = document.getElementById('po-delivery-date').value;
-        const note = document.getElementById('po-note').value.trim();
-        const poNumInput = document.getElementById('po-number-preview').value.trim();
-
-        if (!supplier || !date) { alert('Supplier dan Tanggal PO wajib diisi!'); return; }
-
-        const rows = document.querySelectorAll('#po-item-rows tr');
-        const items = [];
-        let grandTotal = 0;
-
-        rows.forEach(tr => {
-            const code = tr.querySelector('.po-mat-code').value.trim().toUpperCase();
-            const desc = tr.querySelector('.po-mat-desc').value.trim();
-            const buyer = tr.querySelector('.po-mat-buyer').value.trim();
-            const qty = parseFloat(tr.querySelector('.po-mat-qty').value) || 0;
-            const uom = tr.querySelector('.po-mat-uom').value.trim();
-            const price = parseFloat(tr.querySelector('.po-mat-price').value) || 0;
-            const itemNote = tr.querySelector('.po-mat-note').value.trim();
-
-            if (code && qty > 0) {
-                const total = qty * price;
-                grandTotal += total;
-                items.push({ code, desc, buyer, qty, receivedQty: 0, uom, price, total, note: itemNote });
-            }
+    function renderDashboard() {
+        const stockMap = calculateCurrentStockMapTotal();
+        const buyers = {}, alerts = [];
+        materials.forEach(mat => {
+            const buyer = (mat.buyer || 'Tanpa Buyer').trim();
+            buyers[buyer] = (buyers[buyer] || 0) + 1;
+            const stock = Number(stockMap[mat.code] || 0);
+            const reorder = Number(mat.reorder || 0);
+            if (stock <= reorder) alerts.push({mat, stock, reorder});
         });
 
-        if (items.length === 0) { alert('Harap isi minimal 1 baris item PO dengan qty > 0'); return; }
+        document.getElementById('dash-total-material').textContent = materials.length.toLocaleString('id-ID');
+        document.getElementById('dash-total-buyer').textContent = Object.keys(buyers).length.toLocaleString('id-ID');
+        document.getElementById('dash-reorder-count').textContent = alerts.length.toLocaleString('id-ID');
+        document.getElementById('dash-safe-count').textContent = (materials.length - alerts.length).toLocaleString('id-ID');
 
-        const poNumber = poNumInput || `PO-${new Date().getFullYear()}-${String(purchaseOrders.length + 1).padStart(4, '0')}`;
-
-        if (poEditingId) {
-            const idx = purchaseOrders.findIndex(p => p.id === poEditingId);
-            if (idx >= 0) {
-                purchaseOrders[idx] = { ...purchaseOrders[idx], poNumber, supplier, date, deliveryDate, note, items, grandTotal };
-            }
-            poEditingId = null;
-        } else {
-            purchaseOrders.unshift({ id: `PO-ID-${Date.now()}`, poNumber, supplier, date, deliveryDate, note, items, grandTotal, status: 'Draft' });
+        const chart = document.getElementById('dashboard-buyer-chart');
+        const buyerEntries = Object.entries(buyers).sort((a,b) => b[1] - a[1]);
+        if (!buyerEntries.length) chart.innerHTML = '<div style="color:#666">Belum ada data.</div>';
+        else {
+            chart.innerHTML = buyerEntries.map(([buyer, count]) => {
+                const pct = materials.length ? count / materials.length * 100 : 0;
+                return `<div class="buyer-bar-row"><div>${buyer}</div><div class="buyer-bar-track"><div class="buyer-bar-fill" style="width:${pct.toFixed(1)}%"></div></div><div class="buyer-bar-value">${pct.toFixed(0)}% (${count})</div></div>`;
+            }).join('');
         }
 
-        localStorage.setItem('sap_purchase_orders', JSON.stringify(purchaseOrders));
-        saveState();
-        alert(`Purchase Order [${poNumber}] berhasil disimpan!`);
-        resetPOForm();
-        renderPOTable();
+        const tbody = document.getElementById('dashboard-reorder-body');
+        if (!alerts.length) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#087a08;font-weight:bold;">Semua stok aman.</td></tr>';
+        else tbody.innerHTML = alerts.map(({mat,stock,reorder}) => `<tr><td><strong>${mat.code}</strong></td><td>${mat.desc}</td><td>${mat.buyer}</td><td style="text-align:right;font-weight:bold;color:#b00000;">${stock} ${mat.uom}</td><td style="text-align:right;">${reorder}</td><td class="dash-alert">Reorder Alert</td></tr>`).join('');
     }
 
-    function resetPOForm() {
-        poEditingId = null;
-        document.getElementById('po-number-preview').value = '';
-        document.getElementById('po-supplier').value = '';
-        document.getElementById('po-note').value = '';
-        document.getElementById('po-item-rows').innerHTML = '';
-        addPORow();
-        calculatePOTotals();
-    }
-
-    function renderPOTable() {
-        const tbody = document.getElementById('po-list-body');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
-        const search = (document.getElementById('po-search')?.value || '').toLowerCase().trim();
-        const statusFilter = document.getElementById('po-status-filter')?.value || 'ALL';
-
-        purchaseOrders.forEach(po => {
-            const matchSearch = !search || po.poNumber.toLowerCase().includes(search) || po.supplier.toLowerCase().includes(search);
-            const matchStatus = statusFilter === 'ALL' || po.status === statusFilter;
-
-            if (matchSearch && matchStatus) {
-                let totalQtyPO = 0, totalQtyRec = 0;
-                (po.items || []).forEach(it => { totalQtyPO += it.qty; totalQtyRec += (it.receivedQty || 0); });
-                const blc = totalQtyPO - totalQtyRec;
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${po.poNumber}</strong></td>
-                    <td>${po.date}</td>
-                    <td>${po.supplier}</td>
-                    <td>${po.deliveryDate || '-'}</td>
-                    <td style="text-align:center;">${po.items ? po.items.length : 0}</td>
-                    <td style="text-align:right;">${(po.grandTotal || 0).toLocaleString('id-ID')}</td>
-                    <td style="text-align:right;">${totalQtyPO}</td>
-                    <td style="text-align:right; color:green;">${totalQtyRec}</td>
-                    <td style="text-align:right; color:red;">${blc}</td>
-                    <td><span class="badge-mvt mvt-gr">${po.status}</span></td>
-                    <td><button class="sap-btn" onclick="copyPOToMigo('${po.poNumber}')">📦 Terima MIGO</button></td>
-                `;
-                tbody.appendChild(tr);
-            }
+    /* KALKULASI STOK (101/701 MASUK, 201/702 KELUAR) */
+    function calculateCurrentStockMapBySLoc() {
+        const map = {};
+        mutasiLog.forEach(log => {
+            if (!log.sloc || log.sloc === '-') return;
+            const key = `${log.code}__${log.sloc.toUpperCase()}`;
+            if (map[key] === undefined) map[key] = 0;
+            if (log.mvt === '101' || log.mvt === '701') map[key] += parseFloat(log.qty);
+            else if (log.mvt === '201' || log.mvt === '702') map[key] -= parseFloat(log.qty);
         });
+        return map;
     }
 
-    function copyPOToMigo(poNum) {
-        const po = purchaseOrders.find(p => p.poNumber === poNum);
-        if (!po) return;
+    function calculateCurrentStockMapTotal() {
+        const map = {};
+        materials.forEach(m => map[m.code] = 0);
+        mutasiLog.forEach(log => {
+            if (map[log.code] === undefined) map[log.code] = 0;
+            if (log.mvt === '101' || log.mvt === '701') map[log.code] += parseFloat(log.qty);
+            else if (log.mvt === '201' || log.mvt === '702') map[log.code] -= parseFloat(log.qty);
+        });
+        return map;
+    }
 
-        switchTab('migo-gr');
-        document.getElementById('gr-ref').value = po.poNumber;
-        document.getElementById('gr-partner').value = po.supplier;
-
-        const tbody = document.getElementById('rows-migo-gr');
+    function renderStockTable() {
+        const search = document.getElementById('stock-search').value.trim().toLowerCase();
+        const buyerFilter = document.getElementById('stock-buyer-filter').value.toLowerCase();
+        const tbody = document.getElementById('grid-stock-body');
         tbody.innerHTML = '';
 
-        po.items.forEach((item, index) => {
+        const stockBySLoc = calculateCurrentStockMapBySLoc();
+        const totalStockMap = calculateCurrentStockMapTotal();
+        const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
+
+        sortedMaterials.forEach(mat => {
+            if (buyerFilter && !mat.buyer.toLowerCase().includes(buyerFilter)) return;
+            
+            let rakDetails = [];
+            let slocsList = [];
+            
+            Object.keys(stockBySLoc).forEach(key => {
+                const [mCode, slocName] = key.split('__');
+                if (mCode === mat.code && stockBySLoc[key] !== 0) {
+                    rakDetails.push(`<b>${slocName}</b>: ${stockBySLoc[key]} ${mat.uom}`);
+                    slocsList.push(slocName.toLowerCase());
+                }
+            });
+
+            let isMatched = false;
+
+            if (!search) {
+                isMatched = true;
+            } else {
+                const isCodeMatch = mat.code.toLowerCase().includes(search);
+                const isDescMatch = mat.desc.toLowerCase().includes(search);
+                const isBuyerMatch = mat.buyer.toLowerCase().includes(search);
+                const isSlocMatch = slocsList.some(s => s.includes(search));
+
+                if (isCodeMatch || isDescMatch || isBuyerMatch || isSlocMatch) {
+                    isMatched = true;
+                }
+            }
+
+            if (!isMatched) return;
+
+            const totalStock = totalStockMap[mat.code] || 0;
+            const isLow = totalStock <= (mat.reorder || 0);
+            const statusTag = isLow ? `<span style="color:#cc0000;font-weight:bold;">⚠️ Reorder Alert</span>` : `<span style="color:#087a08;">✅ Safe Stock</span>`;
+            const slocDisplay = rakDetails.length > 0 ? rakDetails.join(' | ') : '<span style="color:#888;">Belum ada penempatan rak</span>';
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="text-align:center;">${(index + 1) * 10}</td>
-                <td><input type="text" class="migo-mat-input" value="${item.code}" readonly style="background:#eee; font-weight:bold;"></td>
-                <td><input type="text" class="migo-desc" value="${item.desc}" readonly style="background:#eee;"></td>
-                <td><input type="text" class="migo-style" placeholder="Style"></td>
-                <td><input type="number" class="migo-qty" value="${item.qty - (item.receivedQty || 0)}" min="0" style="text-align:right;"></td>
-                <td><input type="text" class="migo-uom" value="${item.uom}" readonly style="background:#eee; text-align:center;"></td>
-                <td><input type="text" class="migo-sloc" placeholder="Rak *" required></td>
-                <td><input type="text" class="migo-text" value="Penerimaan PO ${po.poNumber}"></td>
-                <td style="text-align:center;"><button class="sap-btn sap-btn-red" onclick="this.closest('tr').remove(); reindexMigoRows('gr');">X</button></td>
+                <td><strong>${mat.code}</strong></td>
+                <td>${mat.buyer}</td>
+                <td>${mat.desc}</td>
+                <td>${mat.uom}</td>
+                <td style="text-align: right; font-weight: bold; color: ${totalStock < 0 ? '#cc0000' : '#000'}">${totalStock.toLocaleString('id-ID')}</td>
+                <td>${slocDisplay}</td>
+                <td style="text-align: right;">${mat.reorder || 0}</td>
+                <td>${statusTag}</td>
+                <td><button class="sap-btn" onclick="openLedgerModal('${mat.code}')">📋 Kartu Stok</button></td>
             `;
             tbody.appendChild(tr);
         });
+
+        if (tbody.children.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:12px; color:#888;">Tidak ada material/stok yang ditemukan untuk lokasi rak atau keyword [${search}].</td></tr>`;
+        }
+
+        if (document.getElementById('dashboard-buyer-chart')) renderDashboard();
     }
 
-    /* REKAP STYLE (ZSTYLE) */
     function renderRekapStyleTable() {
+        const selectElem = document.getElementById('rekap-style-select');
+        const selectedStyleFilter = selectElem ? selectElem.value : 'ALL';
+        const searchKw = document.getElementById('rekap-style-search').value.toLowerCase();
         const tbody = document.getElementById('grid-rekap-style-body');
-        const selectStyle = document.getElementById('rekap-style-select');
-        if (!tbody) return;
-
-        // Sync Select Options Style
-        const styleSet = new Set();
-        mutasiLog.forEach(l => { if (l.style && l.style !== '-') styleSet.add(l.style); });
-
-        const currentVal = selectStyle.value;
-        selectStyle.innerHTML = '<option value="ALL">Semua Garment Style</option>';
-        Array.from(styleSet).sort().forEach(st => {
-            const opt = document.createElement('option');
-            opt.value = st; opt.innerText = st;
-            selectStyle.appendChild(opt);
-        });
-        selectStyle.value = currentVal || 'ALL';
-
-        const filterStyle = selectStyle.value;
-        const search = document.getElementById('rekap-style-search').value.toLowerCase().trim();
-
-        // Agregasi Data Pengeluaran (MVT 201)
-        const summary = {};
-        mutasiLog.forEach(log => {
-            if (log.mvt === '201') {
-                const style = log.style || 'NO-STYLE';
-                const key = `${style}__${log.code}`;
-                if (!summary[key]) {
-                    const mat = materials.find(m => m.code === log.code) || {};
-                    summary[key] = {
-                        style, code: log.code, desc: log.desc, buyer: mat.buyer || 'General',
-                        uom: log.uom, totalQty: 0, count: 0, lastDate: log.date
-                    };
-                }
-                summary[key].totalQty += parseFloat(log.qty) || 0;
-                summary[key].count += 1;
-                if (log.date > summary[key].lastDate) summary[key].lastDate = log.date;
-            }
-        });
-
         tbody.innerHTML = '';
-        Object.values(summary).forEach(row => {
-            const matchStyle = filterStyle === 'ALL' || row.style === filterStyle;
-            const matchSearch = !search || row.style.toLowerCase().includes(search) || row.code.toLowerCase().includes(search) || row.desc.toLowerCase().includes(search);
 
-            if (matchStyle && matchSearch) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${row.style}</strong></td>
-                    <td>${row.code}</td>
-                    <td>${row.desc}</td>
-                    <td>${row.buyer}</td>
-                    <td style="text-align:right; font-weight:bold; color:red;">${row.totalQty.toLocaleString('id-ID')}</td>
-                    <td>${row.uom}</td>
-                    <td style="text-align:center;">${row.count} Transaksi</td>
-                    <td>${row.lastDate}</td>
-                `;
-                tbody.appendChild(tr);
+        const uniqueStyles = new Set();
+        mutasiLog.forEach(log => { if (log.mvt === '201' && log.style && log.style !== '-') uniqueStyles.add(log.style); });
+
+        if (selectElem) {
+            let currentVal = selectElem.value;
+            selectElem.innerHTML = `<option value="ALL">-- Semua Style --</option>`;
+            uniqueStyles.forEach(st => { selectElem.innerHTML += `<option value="${st}">${st}</option>`; });
+            selectElem.value = currentVal || 'ALL';
+        }
+
+        const rekapMap = {};
+        mutasiLog.forEach(log => {
+            if (log.mvt === '201' && log.style && log.style !== '-') {
+                const key = `${log.style}__${log.code}`;
+                if (!rekapMap[key]) {
+                    const matObj = materials.find(m => m.code === log.code) || {};
+                    rekapMap[key] = { style: log.style, code: log.code, desc: log.desc, buyer: matObj.buyer || '-', totalQty: 0, uom: log.uom, txCount: 0, lastDate: log.date };
+                }
+                rekapMap[key].totalQty += parseFloat(log.qty);
+                rekapMap[key].txCount += 1;
+                if (new Date(log.date) > new Date(rekapMap[key].lastDate)) rekapMap[key].lastDate = log.date;
             }
         });
+
+        let rowsArr = Object.values(rekapMap);
+        if (selectedStyleFilter !== 'ALL') rowsArr = rowsArr.filter(r => r.style === selectedStyleFilter);
+        if (searchKw) rowsArr = rowsArr.filter(r => r.style.toLowerCase().includes(searchKw) || r.code.toLowerCase().includes(searchKw) || r.desc.toLowerCase().includes(searchKw));
+
+        rowsArr.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${row.style}</strong></td>
+                <td>${row.code}</td>
+                <td>${row.desc}</td>
+                <td>${row.buyer}</td>
+                <td style="text-align: right; font-weight: bold; color: #cc0000;">${row.totalQty.toLocaleString('id-ID')}</td>
+                <td>${row.uom}</td>
+                <td style="text-align: center;">${row.txCount}x</td>
+                <td>${row.lastDate}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        if (!rowsArr.length) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:10px;">Belum ada data style.</td></tr>`;
     }
 
-    /* MUTASI DOKUMEN LOG (MB51) */
-    function renderMutasiTable() {
-        const tbody = document.getElementById('grid-mutasi-body');
-        if (!tbody) return;
-        tbody.innerHTML = '';
+    function openLedgerModal(materialCode) {
+        currentLedgerCode = materialCode;
+        const mat = materials.find(m => m.code === materialCode);
+        if (!mat) return;
+        const totalStockMap = calculateCurrentStockMapTotal();
 
-        const search = document.getElementById('mb51-search').value.toLowerCase().trim();
+        document.getElementById('ledger-mat-code').innerText = mat.code;
+        document.getElementById('ledger-mat-desc').innerText = mat.desc;
+        document.getElementById('ledger-mat-buyer').innerText = mat.buyer;
+        document.getElementById('ledger-mat-uom').innerText = mat.uom;
+        document.getElementById('ledger-mat-stock').innerText = `${(totalStockMap[mat.code] || 0).toLocaleString('id-ID')} ${mat.uom}`;
+
+        renderLedgerRows(materialCode);
+        document.getElementById('modal-ledger').style.display = 'flex';
+    }
+
+    function closeLedgerModal() { document.getElementById('modal-ledger').style.display = 'none'; }
+
+    function renderLedgerRows(materialCode, startDate = null, endDate = null) {
+        const tbody = document.getElementById('ledger-table-body');
+        tbody.innerHTML = '';
+        let items = mutasiLog.filter(m => m.code === materialCode).sort((a, b) => new Date(a.date) - new Date(b.date));
+        let runningBalance = 0;
+
+        items.forEach(item => {
+            const inQty = (item.mvt === '101' || item.mvt === '701') ? parseFloat(item.qty) : 0;
+            const outQty = (item.mvt === '201' || item.mvt === '702') ? parseFloat(item.qty) : 0;
+            runningBalance += (inQty - outQty);
+
+            if (startDate && new Date(item.date) < new Date(startDate)) return;
+            if (endDate && new Date(item.date) > new Date(endDate)) return;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.date}</td>
+                <td>${item.docNum}</td>
+                <td>${item.style || '-'}</td>
+                <td><strong>${item.sloc || '-'}</strong></td>
+                <td>${item.partner} (${item.ref})</td>
+                <td>${item.text || '-'}</td>
+                <td style="text-align: right; color: green;">${inQty > 0 ? inQty : '-'}</td>
+                <td style="text-align: right; color: red;">${outQty > 0 ? outQty : '-'}</td>
+                <td style="text-align: right; font-weight: bold;">${runningBalance}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        if (!tbody.children.length) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">Tidak ada riwayat.</td></tr>`;
+    }
+
+    function filterLedgerDate() {
+        renderLedgerRows(currentLedgerCode, document.getElementById('ledger-start-date').value, document.getElementById('ledger-end-date').value);
+    }
+
+    function exportLedgerCSV() {
+        if (!currentLedgerCode) return;
+        let csv = "\uFEFFTanggal;No Dokumen;Style;SLoc;Partner/Ref;Keterangan;Masuk;Keluar;Saldo\n";
+        let items = mutasiLog.filter(m => m.code === currentLedgerCode).sort((a, b) => new Date(a.date) - new Date(b.date));
+        let runningBalance = 0;
+        items.forEach(item => {
+            const inQty = (item.mvt === '101' || item.mvt === '701') ? parseFloat(item.qty) : 0;
+            const outQty = (item.mvt === '201' || item.mvt === '702') ? parseFloat(item.qty) : 0;
+            runningBalance += (inQty - outQty);
+            csv += `"${item.date}";"${item.docNum}";"${item.style || '-'}";"${item.sloc || '-'}";"${item.partner} (${item.ref})";"${item.text || ''}";${inQty};${outQty};${runningBalance}\n`;
+        });
+        downloadCSV(csv, `Kartu_Stok_${currentLedgerCode}.csv`);
+    }
+
+    /* FORMAT KETERANGAN JENIS MUTASI YANG JELAS DI TABEL MB51 */
+    function renderMutasiTable() {
+        const search = document.getElementById('mb51-search').value.toLowerCase();
         const mvtFilter = document.getElementById('mb51-mvt-filter').value;
+        const tbody = document.getElementById('grid-mutasi-body');
+        tbody.innerHTML = '';
 
         mutasiLog.forEach((log, index) => {
-            const matchSearch = !search || 
-                log.docNum.toLowerCase().includes(search) || 
-                log.code.toLowerCase().includes(search) || 
-                log.desc.toLowerCase().includes(search) || 
-                (log.style && log.style.toLowerCase().includes(search)) || 
-                (log.sloc && log.sloc.toLowerCase().includes(search));
+            // Logika Filter Dropdown
+            if (mvtFilter === 'OPNAME' && log.mvt !== '701' && log.mvt !== '702') return;
+            if (mvtFilter !== 'ALL' && mvtFilter !== 'OPNAME' && log.mvt !== mvtFilter) return;
 
-            let matchMvt = true;
-            if (mvtFilter === 'OPNAME') matchMvt = (log.mvt === '701' || log.mvt === '702');
-            else if (mvtFilter !== 'ALL') matchMvt = (log.mvt === mvtFilter);
+            if (search && !log.docNum.toLowerCase().includes(search) && !log.code.toLowerCase().includes(search) && !log.desc.toLowerCase().includes(search) && !(log.sloc && log.sloc.toLowerCase().includes(search))) return;
 
-            if (matchSearch && matchMvt) {
-                const tr = document.createElement('tr');
-                let badgeClass = 'mvt-gr', badgeText = log.mvt;
-                if (log.mvt === '101') { badgeClass = 'mvt-gr'; badgeText = '101 GR'; }
-                else if (log.mvt === '201') { badgeClass = 'mvt-gi'; badgeText = '201 GI'; }
-                else if (log.mvt === '701') { badgeClass = 'mvt-opname-plus'; badgeText = '701 OP+'; }
-                else if (log.mvt === '702') { badgeClass = 'mvt-opname-minus'; badgeText = '702 OP-'; }
+            let mvtBadge = '';
+            if (log.mvt === '101') mvtBadge = '<span class="badge-mvt mvt-gr">Masuk (GR)</span>';
+            else if (log.mvt === '201') mvtBadge = '<span class="badge-mvt mvt-gi">Keluar (GI)</span>';
+            else if (log.mvt === '701') mvtBadge = '<span class="badge-mvt mvt-opname-plus">Opname (+)</span>';
+            else if (log.mvt === '702') mvtBadge = '<span class="badge-mvt mvt-opname-minus">Opname (-)</span>';
+            else mvtBadge = `<span class="badge-mvt">${log.mvt}</span>`;
 
-                tr.innerHTML = `
-                    <td>${log.date}</td>
-                    <td><strong>${log.docNum}</strong></td>
-                    <td style="text-align:center;"><span class="badge-mvt ${badgeClass}">${badgeText}</span></td>
-                    <td>${log.code}</td>
-                    <td>${log.desc}</td>
-                    <td>${log.style || '-'}</td>
-                    <td>${log.sloc || '-'}</td>
-                    <td>${log.partner || '-'}</td>
-                    <td>${log.ref || '-'}</td>
-                    <td style="text-align:right; font-weight:bold;">${parseFloat(log.qty).toLocaleString('id-ID')}</td>
-                    <td>${log.uom}</td>
-                    <td>${log.text || '-'}</td>
-                    <td style="text-align:center;">
-                        <button class="sap-btn" onclick="openEditMutasiModal(${index})">✏️ Edit</button>
-                        <button class="sap-btn sap-btn-red" onclick="deleteMutasiLog(${index})">🗑️ Hapus</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            }
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${log.date}</td>
+                <td><strong>${log.docNum}</strong></td>
+                <td style="text-align:center;">${mvtBadge}</td>
+                <td>${log.code}</td>
+                <td>${log.desc}</td>
+                <td>${log.style || '-'}</td>
+                <td><strong>${log.sloc || '-'}</strong></td>
+                <td>${log.partner}</td>
+                <td>${log.ref}</td>
+                <td style="text-align: right; font-weight: bold;">${parseFloat(log.qty).toLocaleString('id-ID')}</td>
+                <td>${log.uom}</td>
+                <td>${log.text || '-'}</td>
+                <td style="text-align: center;">
+                    <button class="sap-btn" onclick="openEditMutasiModal(${index})">✏️ Edit</button>
+                    <button class="sap-btn sap-btn-red" onclick="deleteMutasiItem(${index})">🗑️ Hapus</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
         });
     }
 
@@ -2149,195 +2144,268 @@
     function saveEditMutasi(event) {
         event.preventDefault();
         const index = parseInt(document.getElementById('edit-mutasi-index').value);
-        if (isNaN(index) || !mutasiLog[index]) return;
+        if (isNaN(index)) return;
 
         mutasiLog[index].date = document.getElementById('edit-mutasi-date').value;
         mutasiLog[index].mvt = document.getElementById('edit-mutasi-mvt').value;
         mutasiLog[index].style = document.getElementById('edit-mutasi-style').value.trim() || '-';
         mutasiLog[index].sloc = document.getElementById('edit-mutasi-sloc').value.trim().toUpperCase() || '-';
-        mutasiLog[index].partner = document.getElementById('edit-mutasi-partner').value.trim();
-        mutasiLog[index].ref = document.getElementById('edit-mutasi-ref').value.trim();
+        mutasiLog[index].partner = document.getElementById('edit-mutasi-partner').value.trim() || '-';
+        mutasiLog[index].ref = document.getElementById('edit-mutasi-ref').value.trim() || '-';
         mutasiLog[index].qty = parseFloat(document.getElementById('edit-mutasi-qty').value) || 0;
         mutasiLog[index].text = document.getElementById('edit-mutasi-text').value.trim();
 
         saveState();
         closeEditMutasiModal();
         renderMutasiTable();
-        showStatus('Dokumen mutasi diperbarui', 'S');
+        renderStockTable();
+        renderRekapStyleTable();
+        renderFSNTable();
     }
 
-    function deleteMutasiLog(index) {
-        if (confirm(`Hapus baris dokumen mutasi [${mutasiLog[index].docNum}]?`)) {
+    function deleteMutasiItem(index) {
+        if (confirm(`Hapus transaksi dokumen mutasi ini?`)) {
             mutasiLog.splice(index, 1);
             saveState();
             renderMutasiTable();
+            renderStockTable();
+            renderRekapStyleTable();
+            renderFSNTable();
         }
     }
 
-    /* FSN ANALYSIS LOGIC */
     function renderFSNTable() {
-        const tbody = document.getElementById('grid-fsn-body');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
         const filter = document.getElementById('fsn-filter').value;
-        const stockMap = calculateCurrentStockMap();
+        const tbody = document.getElementById('grid-fsn-body');
+        tbody.innerHTML = '';
+        const stockMap = calculateCurrentStockMapTotal();
 
+        // Urutkan material pada FSN Table berdasarkan Kode Material
         const sortedMaterials = [...materials].sort((a, b) => a.code.localeCompare(b.code));
 
-        sortedMaterials.forEach(m => {
-            const logs = mutasiLog.filter(l => l.code === m.code);
-            const totalTrx = logs.length;
-            let totalOut = 0;
-            let lastDate = '-';
+        sortedMaterials.forEach(mat => {
+            const history = mutasiLog.filter(m => m.code === mat.code);
+            const totalTx = history.length;
+            const outVolume = history.filter(m => m.mvt === '201' || m.mvt === '702').reduce((acc, curr) => acc + parseFloat(curr.qty), 0);
+            let lastDate = history.length ? history.map(h => new Date(h.date)).sort((a,b) => b - a)[0].toISOString().split('T')[0] : '-';
 
-            logs.forEach(l => {
-                if (l.mvt === '201') totalOut += parseFloat(l.qty) || 0;
-                if (l.date > lastDate || lastDate === '-') lastDate = l.date;
-            });
+            let fsnClass = totalTx >= 3 || outVolume >= 50 ? 'FAST' : (totalTx > 0 ? 'SLOW' : 'NON');
+            let fsnBadge = fsnClass === 'FAST' ? `<span class="badge-fsn bg-fast">Fast</span>` : (fsnClass === 'SLOW' ? `<span class="badge-fsn bg-slow">Slow</span>` : `<span class="badge-fsn bg-non">Non</span>`);
 
-            // Klasifikasi FSN
-            let status = 'NON', badgeClass = 'bg-non', statusText = 'Non-Moving';
-            if (totalTrx >= 5 || totalOut >= 100) { status = 'FAST'; badgeClass = 'bg-fast'; statusText = 'Fast Moving'; }
-            else if (totalTrx >= 1 || totalOut > 0) { status = 'SLOW'; badgeClass = 'bg-slow'; statusText = 'Slow Moving'; }
-
-            if (filter === 'ALL' || filter === status) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${m.code}</strong></td>
-                    <td>${m.desc}</td>
-                    <td>${m.buyer}</td>
-                    <td style="text-align:right; font-weight:bold;">${(stockMap[m.code] || 0).toLocaleString('id-ID')} ${m.uom}</td>
-                    <td style="text-align:right;">${totalTrx} Trx</td>
-                    <td style="text-align:right; color:red;">${totalOut.toLocaleString('id-ID')} ${m.uom}</td>
-                    <td>${lastDate}</td>
-                    <td><span class="badge-fsn ${badgeClass}">${statusText}</span></td>
-                `;
-                tbody.appendChild(tr);
-            }
-        });
-    }
-
-    /* KARTU STOK LEDGER POPUP */
-    function openLedgerModal(code) {
-        currentLedgerCode = code;
-        const mat = materials.find(m => m.code === code);
-        if (!mat) return;
-
-        document.getElementById('ledger-mat-code').innerText = mat.code;
-        document.getElementById('ledger-mat-desc').innerText = mat.desc;
-        document.getElementById('ledger-mat-buyer').innerText = mat.buyer;
-        document.getElementById('ledger-mat-uom').innerText = mat.uom;
-
-        const stockMap = calculateCurrentStockMap();
-        document.getElementById('ledger-mat-stock').innerText = `${(stockMap[code] || 0).toLocaleString('id-ID')} ${mat.uom}`;
-
-        renderLedgerTable(code);
-        document.getElementById('modal-ledger').style.display = 'flex';
-    }
-
-    function closeLedgerModal() { document.getElementById('modal-ledger').style.display = 'none'; }
-
-    function renderLedgerTable(code, startDate = null, endDate = null) {
-        const tbody = document.getElementById('ledger-table-body');
-        tbody.innerHTML = '';
-
-        const logs = mutasiLog.filter(l => l.code === code).sort((a, b) => a.date.localeCompare(b.date));
-        let runningBalance = 0;
-
-        logs.forEach(l => {
-            if (startDate && l.date < startDate) return;
-            if (endDate && l.date > endDate) return;
-
-            const qty = parseFloat(l.qty) || 0;
-            let qtyIn = 0, qtyOut = 0;
-            if (l.mvt === '101' || l.mvt === '701') { qtyIn = qty; runningBalance += qty; }
-            else if (l.mvt === '201' || l.mvt === '702') { qtyOut = qty; runningBalance -= qty; }
+            if (filter !== 'ALL' && fsnClass !== filter) return;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${l.date}</td>
-                <td><strong>${l.docNum}</strong></td>
-                <td>${l.style || '-'}</td>
-                <td>${l.sloc || '-'}</td>
-                <td>${l.partner || l.ref || '-'}</td>
-                <td>${l.text || '-'}</td>
-                <td style="text-align:right; color:green;">${qtyIn > 0 ? qtyIn.toLocaleString('id-ID') : '-'}</td>
-                <td style="text-align:right; color:red;">${qtyOut > 0 ? qtyOut.toLocaleString('id-ID') : '-'}</td>
-                <td style="text-align:right; font-weight:bold;">${runningBalance.toLocaleString('id-ID')}</td>
+                <td><strong>${mat.code}</strong></td>
+                <td>${mat.desc}</td>
+                <td>${mat.buyer}</td>
+                <td style="text-align: right; font-weight: bold;">${(stockMap[mat.code] || 0).toLocaleString('id-ID')} ${mat.uom}</td>
+                <td style="text-align: right;">${totalTx}x</td>
+                <td style="text-align: right;">${outVolume.toLocaleString('id-ID')}</td>
+                <td>${lastDate}</td>
+                <td>${fsnBadge}</td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    function filterLedgerDate() {
-        const s = document.getElementById('ledger-start-date').value;
-        const e = document.getElementById('ledger-end-date').value;
-        if (currentLedgerCode) renderLedgerTable(currentLedgerCode, s, e);
+    function savePOState() { localStorage.setItem('sap_purchase_orders', JSON.stringify(purchaseOrders)); saveAllToCloud(); }
+
+    function addPORow(item = {}) {
+        const tbody = document.getElementById('po-item-rows');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="text-align:center;"></td>
+            <td><input class="po-code" list="global-material-list" value="${item.code || ''}" oninput="onPOCodeInput(this)" placeholder="Kode"></td>
+            <td><input class="po-desc" readonly style="background:#eee;" value="${item.desc || ''}"></td>
+            <td><input class="po-buyer" readonly style="background:#eee;" value="${item.buyer || ''}"></td>
+            <td><input class="po-qty" type="number" min="0.01" step="any" value="${item.qty ?? 0}" oninput="updatePOTotals()" style="text-align:right;"></td>
+            <td><input class="po-uom" readonly style="background:#eee;text-align:center;" value="${item.uom || ''}"></td>
+            <td><input class="po-price" type="number" min="0" step="any" value="${item.price ?? 0}" oninput="updatePOTotals()" style="text-align:right;"></td>
+            <td class="po-line-total" style="text-align:right;font-weight:bold;">0</td>
+            <td><input class="po-item-note" value="${item.note || ''}" placeholder="Catatan"></td>
+            <td><button type="button" class="sap-btn sap-btn-red" onclick="this.closest('tr').remove();reindexPORows();updatePOTotals();">X</button></td>`;
+        tbody.appendChild(tr);
+        reindexPORows();
+        if (item.code) onPOCodeInput(tr.querySelector('.po-code'));
+        updatePOTotals();
     }
 
-    function exportLedgerCSV() {
-        if (!currentLedgerCode) return;
-        const logs = mutasiLog.filter(l => l.code === currentLedgerCode);
-        let csv = 'Tanggal,No Dokumen,Style,SLoc,Partner/Ref,Catatan,Qty Masuk,Qty Keluar\n';
-        logs.forEach(l => {
-            csv += `"${l.date}","${l.docNum}","${l.style || ''}","${l.sloc || ''}","${l.partner || ''}","${l.text || ''}","${l.mvt === '101' || l.mvt === '701' ? l.qty : 0}","${l.mvt === '201' || l.mvt === '702' ? l.qty : 0}"\n`;
+    function reindexPORows() { document.querySelectorAll('#po-item-rows tr').forEach((tr, i) => tr.cells[0].textContent = (i + 1) * 10); }
+
+    function onPOCodeInput(input) {
+        const code = input.value.trim().toUpperCase();
+        const tr = input.closest('tr');
+        const mat = materials.find(m => m.code.toUpperCase() === code);
+        tr.querySelector('.po-desc').value = mat ? mat.desc : '';
+        tr.querySelector('.po-buyer').value = mat ? mat.buyer : '';
+        tr.querySelector('.po-uom').value = mat ? mat.uom : '';
+        updatePOTotals();
+    }
+
+    function updatePOTotals() {
+        let grand = 0;
+        document.querySelectorAll('#po-item-rows tr').forEach(tr => {
+            const qty = parseFloat(tr.querySelector('.po-qty').value) || 0;
+            const price = parseFloat(tr.querySelector('.po-price').value) || 0;
+            const total = qty * price;
+            tr.querySelector('.po-line-total').textContent = total.toLocaleString('id-ID');
+            grand += total;
         });
-        downloadCSVFile(csv, `Ledger_${currentLedgerCode}.csv`);
+        document.getElementById('po-grand-total').textContent = grand.toLocaleString('id-ID');
     }
 
-    /* EXPORT CSV GENERIC */
-    function exportCSV(type) {
-        let csv = '', filename = 'export.csv';
-        if (type === 'stock') {
-            filename = 'Stok_Material_Overview.csv';
-            csv = 'Kode Material,Buyer,Deskripsi,Satuan,Stok Total,Reorder Level\n';
-            const stockMap = calculateCurrentStockMap();
-            materials.forEach(m => {
-                csv += `"${m.code}","${m.buyer}","${m.desc}","${m.uom}","${stockMap[m.code] || 0}","${m.reorder || 0}"\n`;
-            });
-        } else if (type === 'mutasi') {
-            filename = 'Mutasi_Material_Log.csv';
-            csv = 'Tanggal,No Dokumen,MVT,Kode Material,Deskripsi,Style,SLoc,Partner,No Ref,Qty,UoM,Text\n';
-            mutasiLog.forEach(l => {
-                csv += `"${l.date}","${l.docNum}","${l.mvt}","${l.code}","${l.desc}","${l.style || ''}","${l.sloc || ''}","${l.partner || ''}","${l.ref || ''}","${l.qty}","${l.uom}","${l.text || ''}"\n`;
-            });
-        } else if (type === 'po') {
-            filename = 'Purchase_Orders.csv';
-            csv = 'No PO,Tanggal,Supplier,Rencana Datang,Total,Status\n';
-            purchaseOrders.forEach(p => {
-                csv += `"${p.poNumber}","${p.date}","${p.supplier}","${p.deliveryDate || ''}","${p.grandTotal}","${p.status}"\n`;
-            });
-        } else if (type === 'fsn') {
-            filename = 'FSN_Analysis_Report.csv';
-            csv = 'Kode Material,Deskripsi,Buyer,Stok,Total Trx,Status FSN\n';
-            const stockMap = calculateCurrentStockMap();
-            materials.forEach(m => {
-                const logs = mutasiLog.filter(l => l.code === m.code);
-                let st = 'NON';
-                if (logs.length >= 5) st = 'FAST'; else if (logs.length >= 1) st = 'SLOW';
-                csv += `"${m.code}","${m.desc}","${m.buyer}","${stockMap[m.code] || 0}","${logs.length}","${st}"\n`;
-            });
-        } else if (type === 'opname') {
-            filename = 'Opname_History_Report.csv';
-            csv = 'Tanggal,No Dokumen,Kode Rak,Kode Material,Deskripsi,Buyer,UoM,Book Qty,Counted Qty,Variance,Status,Petugas\n';
-            opnameHistory.forEach(r => {
-                csv += `"${r.date}","${r.docNum}","${r.sloc}","${r.code}","${r.desc}","${r.buyer}","${r.uom}","${r.bookQty}","${r.countedQty}","${r.variance}","${r.status}","${r.user}"\n`;
-            });
+    function resetPOForm() {
+        poEditingId = null;
+        document.getElementById('po-number-preview').value = '';
+        document.getElementById('po-supplier').value = '';
+        document.getElementById('po-note').value = '';
+        document.getElementById('po-item-rows').innerHTML = '';
+        addPORow();
+    }
+
+    function savePurchaseOrder() {
+        const poNo = document.getElementById('po-number-preview').value.trim();
+        const supplier = document.getElementById('po-supplier').value.trim();
+        const date = document.getElementById('po-date').value;
+        const deliveryDate = document.getElementById('po-delivery-date').value;
+        const note = document.getElementById('po-note').value.trim();
+        const rows = [...document.querySelectorAll('#po-item-rows tr')];
+
+        if (!poNo) { alert('Nomor PO wajib diisi.'); return; }
+        if (!supplier || !date) { alert('Supplier dan Tanggal PO wajib diisi.'); return; }
+        if (!rows.length) { alert('Tambahkan minimal 1 item.'); return; }
+
+        let items = [];
+        for (let tr of rows) {
+            const code = tr.querySelector('.po-code').value.trim().toUpperCase();
+            const mat = materials.find(m => m.code.toUpperCase() === code);
+            if (!mat) { alert('Kode material tidak valid!'); return; }
+            items.push({ code: mat.code, desc: mat.desc, buyer: mat.buyer || '-', uom: mat.uom, qty: parseFloat(tr.querySelector('.po-qty').value)||0, price: parseFloat(tr.querySelector('.po-price').value)||0, note: tr.querySelector('.po-item-note').value.trim() });
         }
-        downloadCSVFile(csv, filename);
+
+        purchaseOrders.unshift({ id: `${Date.now()}`, number: poNo, supplier, date, deliveryDate, note, items, status: 'Draft' });
+        savePOState();
+        renderPOTable();
+        resetPOForm();
+        alert(`PO [${poNo}] Berhasil Disimpan sebagai Draft!`);
     }
 
-    function downloadCSVFile(csvContent, filename) {
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
+    function getPOProgress(po) {
+        let ordered = {}, received = {};
+        po.items.forEach(i => ordered[i.code] = (ordered[i.code] || 0) + Number(i.qty));
+        mutasiLog.forEach(l => { if (l.mvt === '101' && l.ref === po.number) received[l.code] = (received[l.code] || 0) + Number(l.qty); });
+        const totOrd = Object.values(ordered).reduce((a,b)=>a+b,0);
+        const totRec = Object.values(received).reduce((a,b)=>a+b,0);
+        const totVal = po.items.reduce((sum,i)=>sum + Number(i.qty)*Number(i.price),0);
+        let status = po.status;
+        if (status !== 'Draft' && status !== 'Cancelled') {
+            status = totRec >= totOrd && totOrd > 0 ? 'Completed' : (totRec > 0 ? 'Partial' : 'Approved');
+        }
+        return { totOrd, totRec, totVal, status };
+    }
+
+    function renderPOTable() {
+        const tbody = document.getElementById('po-list-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        const search = document.getElementById('po-search').value.toLowerCase();
+        const filter = document.getElementById('po-status-filter').value;
+
+        purchaseOrders.forEach(po => {
+            const p = getPOProgress(po);
+            if (search && !po.number.toLowerCase().includes(search) && !po.supplier.toLowerCase().includes(search)) return;
+            if (filter !== 'ALL' && p.status !== filter) return;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${po.number}</strong></td>
+                <td>${po.date}</td>
+                <td>${po.supplier}</td>
+                <td>${po.deliveryDate || '-'}</td>
+                <td style="text-align:right">${po.items.length}</td>
+                <td style="text-align:right">${p.totVal.toLocaleString('id-ID')}</td>
+                <td style="text-align:right">${p.totOrd}</td>
+                <td style="text-align:right">${p.totRec}</td>
+                <td style="text-align:right">${p.totRec - p.totOrd}</td>
+                <td><strong>${p.status}</strong></td>
+                <td>
+                    ${po.status === 'Draft' ? `<button class="sap-btn sap-btn-green" onclick="approvePO('${po.id}')">Approve</button>` : ''}
+                    ${['Approved','Partial'].includes(p.status) ? `<button class="sap-btn sap-btn-green" onclick="receivePO('${po.id}')">Terima</button>` : ''}
+                    <button class="sap-btn sap-btn-red" onclick="deletePO('${po.id}')">🗑️ Hapus</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        if (!tbody.children.length) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">Tidak ada PO.</td></tr>`;
+    }
+
+    function approvePO(id) {
+        const po = purchaseOrders.find(p => p.id === id);
+        if (po) { po.status = 'Approved'; savePOState(); renderPOTable(); }
+    }
+
+    function deletePO(id) {
+        const po = purchaseOrders.find(p => p.id === id);
+        if (!po) return;
+        if (confirm(`Apakah Anda yakin ingin menghapus PO [${po.number}]?`)) {
+            purchaseOrders = purchaseOrders.filter(p => p.id !== id);
+            savePOState();
+            renderPOTable();
+            showStatus(`PO [${po.number}] berhasil dihapus`, 'S');
+        }
+    }
+
+    function receivePO(id) {
+        const po = purchaseOrders.find(p => p.id === id);
+        if (!po) return;
+        document.getElementById('gr-ref').value = po.number;
+        document.getElementById('gr-partner').value = po.supplier;
+        document.getElementById('rows-migo-gr').innerHTML = '';
+        po.items.forEach(item => {
+            addMigoRow('gr');
+            const tr = document.querySelector('#rows-migo-gr tr:last-child');
+            tr.querySelector('.migo-mat-input').value = item.code;
+            onMigoMaterialInput(tr.querySelector('.migo-mat-input'));
+            tr.querySelector('.migo-qty').value = item.qty;
+        });
+        switchTab('migo-gr');
+    }
+
+    function exportCSV(type) {
+        let csv = '\uFEFF';
+        if (type === 'stock') {
+            csv += "Kode Material;Buyer;Deskripsi;UoM;Stok;SLoc Info;Reorder;Status\n";
+            const stockBySLoc = calculateCurrentStockMapBySLoc();
+            const totalStockMap = calculateCurrentStockMapTotal();
+            materials.forEach(m => {
+                let rakDetails = [];
+                Object.keys(stockBySLoc).forEach(k => { const [mc, sl] = k.split('__'); if (mc === m.code && stockBySLoc[k] !== 0) rakDetails.push(`${sl}: ${stockBySLoc[k]}`); });
+                csv += `"${m.code}";"${m.buyer}";"${m.desc}";"${m.uom}";${totalStockMap[m.code]||0};"${rakDetails.join(' | ')}";${m.reorder};"${(totalStockMap[m.code]||0) <= m.reorder ? 'Alert' : 'Safe'}"\n`;
+            });
+            downloadCSV(csv, 'Stock_Overview.csv');
+        } else if (type === 'opname') {
+            csv += "Tanggal;No Dokumen;Kode Rak;Kode Material;Deskripsi;Buyer;Satuan;Stok Sistem;Hasil Fisik;Selisih;Status;Petugas\\n";
+            getFilteredOpnameHistory().forEach(r => {
+                const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+                csv += [r.date,r.docNum,r.sloc,r.code,r.desc,r.buyer,r.uom,r.bookQty,r.countedQty,r.variance,r.status,r.user].map(esc).join(';') + "\\n";
+            });
+            downloadCSV(csv, 'Report_Hasil_Stok_Opname.csv');
+        } else if (type === 'mutasi') {
+            csv += "Tanggal;No Dokumen;Jenis;Kode;Deskripsi;Style;SLoc;Partner;Ref;Qty;UoM;Text\n";
+            mutasiLog.forEach(m => {
+                csv += `"${m.date}";"${m.docNum}";"${m.mvt}";"${m.code}";"${m.desc}";"${m.style}";"${m.sloc}";"${m.partner}";"${m.ref}";${m.qty};"${m.uom}";"${m.text}"\n`;
+            });
+            downloadCSV(csv, 'Mutasi_MB51.csv');
+        }
+    }
+
+    function downloadCSV(csv, filename) {
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', filename);
         link.click();
-        document.body.removeChild(link);
     }
 </script>
 </body>
