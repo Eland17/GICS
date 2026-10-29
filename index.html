@@ -443,9 +443,23 @@
                 border-radius: 6px;
             }
         }
-    </style>
+    
+        /* Notifikasi hasil penyimpanan Firebase */
+        #firebase-save-toast {
+            position: fixed; right: 18px; top: 18px; z-index: 99999;
+            display: none; max-width: min(420px, calc(100vw - 30px));
+            padding: 13px 18px; border: 1px solid #176b32; border-left: 5px solid #16803c;
+            background: #e9f8ee; color: #14532d; box-shadow: 0 4px 16px rgba(0,0,0,.22);
+            font: bold 13px 'Segoe UI', Tahoma, sans-serif; border-radius: 5px;
+        }
+        #firebase-save-toast.error {
+            background: #fff0f0; color: #991b1b; border-color: #b91c1c;
+        }
+</style>
 </head>
 <body>
+
+<div id="firebase-save-toast" role="status" aria-live="polite"></div>
 
 <div class="sap-window">
     <!-- SAP Title Bar -->
@@ -1317,17 +1331,36 @@
         return snap.docs.map(d => d.data()).sort((a, b) => (a._order ?? 0) - (b._order ?? 0)).map(({_order, ...row}) => row);
     }
 
+    let firebaseToastTimer = null;
+    function showFirebaseToast(message, isError = false) {
+        const toast = document.getElementById('firebase-save-toast');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.toggle('error', !!isError);
+        toast.style.display = 'block';
+        if (firebaseToastTimer) clearTimeout(firebaseToastTimer);
+        firebaseToastTimer = setTimeout(() => { toast.style.display = 'none'; }, 4500);
+    }
+
     async function saveAllToCloud() {
-        if (!cloudReady) return;
+        if (!cloudReady) {
+            showFirebaseToast('Firebase belum siap. Data belum dikonfirmasi tersimpan ke cloud.', true);
+            return false;
+        }
         cloudSaveQueue = cloudSaveQueue.then(async () => {
             await replaceCloudCollection(CLOUD_COLLECTIONS.materials, materials, 'code');
             await replaceCloudCollection(CLOUD_COLLECTIONS.mutasi, mutasiLog, 'id');
             await replaceCloudCollection(CLOUD_COLLECTIONS.purchaseOrders, purchaseOrders, 'id');
             await replaceCloudCollection(CLOUD_COLLECTIONS.opnameHistory, opnameHistory, 'id');
-            showStatus('Data tersimpan dan tersinkron ke Firebase', 'S');
+            showStatus('Data berhasil tersimpan dan tersinkron ke Firebase', 'S');
+            showFirebaseToast('✅ Berhasil! Data sudah tersimpan ke Firebase.');
+            return true;
         }).catch(err => {
             console.error('Firebase save error:', err);
-            showStatus('Gagal menyimpan ke Firebase: ' + (err.message || err.code || 'periksa Rules/koneksi'), 'E');
+            const message = err.message || err.code || 'Periksa Rules/koneksi Firebase';
+            showStatus('Gagal menyimpan ke Firebase: ' + message, 'E');
+            showFirebaseToast('❌ Gagal menyimpan ke Firebase: ' + message, true);
+            return false;
         });
         return cloudSaveQueue;
     }
