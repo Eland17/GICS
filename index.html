@@ -394,9 +394,17 @@
         #print-sheet-container { display: none; }
         .no-print { display: block; }
 
-        /* SKALA DESKTOP 20% LEBIH BESAR */
+        /* SKALA DESKTOP: tampilan diperbesar 20% dan tetap pas dalam layar */
         @media (min-width: 1024px) {
-            body { zoom: 1; }
+            body {
+                zoom: 1.2;
+                width: 83.333333vw;
+                height: 83.333333vh;
+            }
+            .sap-window {
+                width: 100%;
+                height: calc(83.333333vh - 8px);
+            }
         }
 
         /* RESPONSIVE MOBILE OPTIMIZATION KHUSUS XIAOMI REDMI NOTE 7 (STOK BARANG MMBE) */
