@@ -510,6 +510,36 @@
             overflow-y: auto !important;
             overscroll-behavior: contain !important;
         }
+
+        .zreq-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:8px 0; }
+        .zreq-grid label { display:block; font-weight:bold; margin-bottom:4px; }
+        .zreq-grid input, .zreq-table input { width:100%; min-width:90px; padding:5px; border:1px solid #9eacba; border-radius:3px; }
+        .zreq-table { width:100%; border-collapse:collapse; }
+        .zreq-table th,.zreq-table td { border:1px solid #c8d2dc; padding:5px; text-align:center; }
+        .zreq-table th { background:#e8eef5; }
+        .zreq-table td.left { text-align:left; }
+        .zreq-table td.right { text-align:right; }
+        .zreq-buttons { display:flex; gap:5px; flex-wrap:wrap; margin:8px 0; }
+        .zreq-saved { margin-top:10px; }
+        @media(max-width:700px){.zreq-grid{grid-template-columns:1fr}.zreq-table{min-width:690px}}
+
+
+        /* Popup rincian material saat Style pada daftar tersimpan diklik */
+        #zreq-style-modal{display:none;position:fixed;inset:0;z-index:100500;background:rgba(15,28,45,.58);align-items:center;justify-content:center;padding:16px}
+        #zreq-style-modal.show{display:flex}
+        #zreq-style-modal .zreq-modal-card{background:#fff;width:min(850px,96vw);max-height:86vh;overflow:auto;border-radius:8px;box-shadow:0 12px 38px #0005;padding:16px}
+        #zreq-style-modal .zreq-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #d6dee8;padding-bottom:10px;margin-bottom:12px}
+        #zreq-style-modal h3{margin:0 0 5px;font-size:17px;color:#17324f}
+        #zreq-style-modal .zreq-modal-meta{font-size:13px;color:#526579}
+        #zreq-style-modal table{width:100%;border-collapse:collapse;min-width:520px}
+        #zreq-style-modal th,#zreq-style-modal td{border:1px solid #ccd6e0;padding:8px;text-align:center}
+        #zreq-style-modal th{background:#e8eef5}
+        #zreq-style-modal td:nth-child(3){text-align:left}
+        #zreq-style-modal td:last-child{text-align:right}
+        .zreq-style-link{border:0;background:transparent;color:#0877cf;text-decoration:underline;cursor:pointer;font-weight:bold;padding:2px}
+        .zreq-style-link:hover{color:#064f8b}
+        @media(max-width:600px){#zreq-style-modal{padding:7px}#zreq-style-modal .zreq-modal-card{padding:11px;max-height:92vh}}
+
 </style>
 </head>
 <body>
@@ -519,8 +549,8 @@
 <div class="sap-window">
     <!-- SAP Title Bar -->
     <div class="sap-titlebar">
-        <span>[Enterprise - Garment Inventory Control System</span>
-        <span>Client: 100 | User: Admin</span>
+        <span>[PRD/100] SAP R/3 Enterprise - Garment Inventory Control System</span>
+        <span>Client: 100 | User: SAPUSER</span>
     </div>
 
     <!-- SAP Menu Bar -->
@@ -551,6 +581,7 @@
         <button class="sap-btn" onclick="switchTab('stok-opname')">MI01/MI07 (Opname)</button>
         <button class="sap-btn" onclick="switchTab('report-opname')">Report Opname</button>
         <button class="sap-btn" onclick="switchTab('rekap-style')">ZSTYLE</button>
+        <button class="sap-btn" onclick="switchTab('kebutuhan-style')">ZMRP (Kebutuhan Material)</button>
         <button class="sap-btn" onclick="switchTab('mb51')">MB51 (Mutasi)</button>
         <button class="sap-btn" onclick="switchTab('fsn')">FSN</button>
         <button class="sap-btn" onclick="switchTab('print-barcode')">ZPRINT (Cetak Barcode)</button>
@@ -567,6 +598,7 @@
         <div class="sap-tab" id="tab-stok-opname" onclick="switchTab('stok-opname')">Stok Opname (MI01/MI07)</div>
         <div class="sap-tab" id="tab-report-opname" onclick="switchTab('report-opname')">Report Hasil Opname</div>
         <div class="sap-tab" id="tab-rekap-style" onclick="switchTab('rekap-style')">Rekap Style (ZSTYLE)</div>
+        <div class="sap-tab" id="tab-kebutuhan-style" onclick="switchTab('kebutuhan-style')">Kebutuhan Material (ZMRP)</div>
         <div class="sap-tab" id="tab-mb51" onclick="switchTab('mb51')">Mutasi Barang (MB51)</div>
         <div class="sap-tab" id="tab-fsn" onclick="switchTab('fsn')">Analisis FSN</div>
         <div class="sap-tab" id="tab-print-barcode" onclick="switchTab('print-barcode')">Cetak Barcode (ZPRINT)</div>
@@ -705,7 +737,6 @@
                                 <option value="KG">KG</option>
                                 <option value="MTR">MTR</option>
                                 <option value="YDS">YDS</option>
-                                <option value="SET">SET</option>
                                 <option value="BOX">BOX</option>
                                 <option value="PACK">PACK</option>
                             </select>
@@ -990,6 +1021,64 @@
             </div>
         </div>
 
+
+        <!-- MODUL ZMRP: DAFTAR KEBUTUHAN MATERIAL PER BUYER & STYLE -->
+        <div id="view-kebutuhan-style" style="display:none;">
+            <div class="sap-panel">
+                <div class="sap-panel-title">Daftar Kebutuhan Material Buyer & Style (ZMRP) — Input Manual / Repeat Order</div>
+                <div class="zreq-grid">
+                    <div><label for="zreq-buyer">Buyer *</label><input id="zreq-buyer" list="zreq-buyer-list" placeholder="Pilih / ketik buyer"><datalist id="zreq-buyer-list"></datalist></div>
+                    <div><label for="zreq-style">Style *</label><input id="zreq-style" placeholder="Kode style"></div>
+                    <div><label for="zreq-style-name">Nama Style *</label><input id="zreq-style-name" placeholder="Nama / deskripsi style"></div>
+                </div>
+                <div class="zreq-buttons">
+                    <button type="button" class="sap-btn" onclick="zreqNew()">Style Baru</button>
+                    <button type="button" class="sap-btn" onclick="zreqLoadByIdentity()">Panggil Style</button>
+                    <button type="button" class="sap-btn sap-btn-green" onclick="zreqSave()">Simpan Kebutuhan</button>
+                    <button type="button" class="sap-btn sap-btn-red" onclick="zreqDelete()">Hapus Style</button>
+                </div>
+                <div id="zreq-status" style="font-size:12px;color:#526579;margin:4px 0 8px;">Isi Buyer, Style, dan Nama Style. Untuk repeat order, panggil style yang sudah tersimpan.</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0;">
+                    <strong>Item Kebutuhan Material</strong><button type="button" class="sap-btn" onclick="zreqAddRow()">+ Tambah Material</button>
+                </div>
+                <div class="sap-grid-container" style="max-height:300px;overflow:auto;">
+                    <table class="zreq-table"><thead><tr><th>No</th><th>Kode Barang</th><th>Nama Material</th><th>Satuan</th><th>Qty per Pcs</th><th>Aksi</th></tr></thead><tbody id="zreq-items-body"></tbody></table>
+                </div>
+                <div class="zreq-buttons">
+                    <button type="button" class="sap-btn sap-btn-green" onclick="zreqSave()">Simpan Kebutuhan</button>
+                    <button type="button" class="sap-btn" onclick="zreqPrint()">Cetak</button>
+                    <button type="button" class="sap-btn" onclick="zreqExport()">Export CSV</button>
+                </div>
+            </div>
+            <div class="sap-panel zreq-saved">
+                <div class="sap-panel-title">Daftar Style Tersimpan</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+                    <input id="zreq-search" oninput="zreqRenderSaved()" placeholder="Cari buyer, style, nama style..." style="max-width:420px;padding:6px;border:1px solid #9eacba;border-radius:3px;">
+                    <span id="zreq-count" style="font-weight:bold;color:#000080;"></span>
+                </div>
+                <div class="sap-grid-container" style="max-height:300px;overflow:auto;">
+                    <table class="sap-grid"><thead><tr><th>No</th><th>Buyer</th><th>Style</th><th>Nama Style</th><th>Jumlah Material</th><th>Aksi</th></tr></thead><tbody id="zreq-saved-body"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Popup detail kebutuhan material per style -->
+        <div id="zreq-style-modal" onclick="if(event.target===this)zreqCloseStyleModal()" role="dialog" aria-modal="true" aria-labelledby="zreq-modal-title">
+            <div class="zreq-modal-card">
+                <div class="zreq-modal-head">
+                    <div><h3 id="zreq-modal-title">Daftar Material Style</h3><div class="zreq-modal-meta" id="zreq-modal-meta"></div></div>
+                    <button type="button" class="sap-btn sap-btn-red" onclick="zreqCloseStyleModal()">Tutup ✕</button>
+                </div>
+                <div class="sap-grid-container" style="overflow:auto;max-height:58vh;">
+                    <table><thead><tr><th>No</th><th>Kode Barang</th><th>Nama Material</th><th>Satuan</th><th>Qty per Pcs</th></tr></thead><tbody id="zreq-modal-items"></tbody></table>
+                </div>
+                <div class="zreq-buttons" style="justify-content:flex-end;margin-top:12px">
+                    <button type="button" class="sap-btn" onclick="zreqEditFromModal()">Edit Daftar Style</button>
+                    <button type="button" class="sap-btn" onclick="zreqPrintModal()">Cetak</button>
+                </div>
+            </div>
+        </div>
+
         <!-- MODUL 4: REKAP MATERIAL BERDASARKAN STYLE (ZSTYLE) -->
         <div id="view-rekap-style" style="display: none;">
             <div class="sap-panel">
@@ -1192,7 +1281,7 @@
             <span id="sap-status-icon" class="sap-status-icon status-s"></span>
             <span id="sap-status-text">System ready. Enter transaction code or select tab.</span>
         </div>
-        <div>ERP / 100</div>
+        <div>ERP PRD (1) / 100</div>
     </div>
 </div>
 
@@ -1343,6 +1432,8 @@
     let purchaseOrders = JSON.parse(localStorage.getItem('sap_purchase_orders') || '[]');
     let poEditingId = null;
     let opnameHistory = JSON.parse(localStorage.getItem('sap_opname_history') || '[]');
+    let kebutuhanMaterialStyle = JSON.parse(localStorage.getItem('sap_kebutuhan_material_style') || '[]');
+    let zreqCurrentId = null;
     let html5QrcodeScanner = null;
     let activeScannerTarget = null;
     let cloudReady = false;
@@ -1358,7 +1449,8 @@
         materials: 'ig_materials',
         mutasi: 'ig_mutasi',
         purchaseOrders: 'ig_purchaseOrders',
-        opnameHistory: 'ig_opnameHistory'
+        opnameHistory: 'ig_opnameHistory',
+        kebutuhanMaterialStyle: 'ig_kebutuhanMaterialStyle'
     };
 
     async function replaceCloudCollection(collectionName, rows, idField) {
@@ -1408,6 +1500,8 @@
             await replaceCloudCollection(CLOUD_COLLECTIONS.mutasi, mutasiLog, 'id');
             await replaceCloudCollection(CLOUD_COLLECTIONS.purchaseOrders, purchaseOrders, 'id');
             await replaceCloudCollection(CLOUD_COLLECTIONS.opnameHistory, opnameHistory, 'id');
+            await replaceCloudCollection(CLOUD_COLLECTIONS.kebutuhanMaterialStyle, kebutuhanMaterialStyle, 'id');
+            localStorage.setItem('sap_kebutuhan_material_style', JSON.stringify(kebutuhanMaterialStyle));
             showStatus('Data berhasil tersimpan dan tersinkron ke Firebase', 'S');
             showFirebaseToast('✅ Berhasil! Data sudah tersimpan ke Firebase.');
             return true;
@@ -1425,14 +1519,16 @@
         const metaRef = db.collection('inventoryAppMeta').doc('migration_v1');
         const meta = await metaRef.get();
         if (meta.exists && meta.data().completed === true) {
-            const [cloudMaterials, cloudMutasi, cloudPO, cloudOpname] = await Promise.all([
+            const [cloudMaterials, cloudMutasi, cloudPO, cloudOpname, cloudNeeds] = await Promise.all([
                 readCloudCollection(CLOUD_COLLECTIONS.materials), readCloudCollection(CLOUD_COLLECTIONS.mutasi),
-                readCloudCollection(CLOUD_COLLECTIONS.purchaseOrders), readCloudCollection(CLOUD_COLLECTIONS.opnameHistory)
+                readCloudCollection(CLOUD_COLLECTIONS.purchaseOrders), readCloudCollection(CLOUD_COLLECTIONS.opnameHistory),
+                readCloudCollection(CLOUD_COLLECTIONS.kebutuhanMaterialStyle)
             ]);
             materials = cloudMaterials.length ? cloudMaterials : [];
             mutasiLog = cloudMutasi;
             purchaseOrders = cloudPO;
             opnameHistory = cloudOpname;
+            kebutuhanMaterialStyle = cloudNeeds;
         } else {
             const hasLocalData = ['sap_materials','sap_mutasi','sap_purchase_orders','sap_opname_history']
                 .some(key => localStorage.getItem(key) !== null);
@@ -1441,17 +1537,20 @@
                 mutasiLog = DEFAULT_MUTASI.slice();
                 purchaseOrders = [];
                 opnameHistory = [];
+                kebutuhanMaterialStyle = JSON.parse(localStorage.getItem('sap_kebutuhan_material_style') || '[]');
             }
             await replaceCloudCollection(CLOUD_COLLECTIONS.materials, materials, 'code');
             await replaceCloudCollection(CLOUD_COLLECTIONS.mutasi, mutasiLog, 'id');
             await replaceCloudCollection(CLOUD_COLLECTIONS.purchaseOrders, purchaseOrders, 'id');
             await replaceCloudCollection(CLOUD_COLLECTIONS.opnameHistory, opnameHistory, 'id');
+            await replaceCloudCollection(CLOUD_COLLECTIONS.kebutuhanMaterialStyle, kebutuhanMaterialStyle, 'id');
             await metaRef.set({ completed: true, migratedAt: firebase.firestore.FieldValue.serverTimestamp(), version: 1 });
         }
         localStorage.setItem('sap_materials', JSON.stringify(materials));
         localStorage.setItem('sap_mutasi', JSON.stringify(mutasiLog));
         localStorage.setItem('sap_purchase_orders', JSON.stringify(purchaseOrders));
         localStorage.setItem('sap_opname_history', JSON.stringify(opnameHistory));
+        localStorage.setItem('sap_kebutuhan_material_style', JSON.stringify(kebutuhanMaterialStyle));
         cloudReady = true;
     }
 
@@ -1524,7 +1623,7 @@
         const activeTab = document.getElementById(`tab-${tabId}`);
         if(activeTab) activeTab.classList.add('active');
 
-        const views = ['dashboard', 'po', 'mm60', 'migo-gr', 'migo-gi', 'mmbe', 'stok-opname', 'report-opname', 'rekap-style', 'mb51', 'fsn', 'print-barcode'];
+        const views = ['dashboard', 'po', 'mm60', 'migo-gr', 'migo-gi', 'mmbe', 'stok-opname', 'report-opname', 'rekap-style', 'kebutuhan-style', 'mb51', 'fsn', 'print-barcode'];
         views.forEach(v => {
             const el = document.getElementById(`view-${v}`);
             if (el) el.style.display = (v === tabId) ? 'block' : 'none';
@@ -1536,6 +1635,7 @@
         if (tabId === 'mmbe') renderStockTable();
         if (tabId === 'report-opname') renderOpnameReport();
         if (tabId === 'rekap-style') renderRekapStyleTable();
+        if (tabId === 'kebutuhan-style') zreqInitModule();
         if (tabId === 'mb51') renderMutasiTable();
         if (tabId === 'fsn') renderFSNTable();
         if (tabId === 'print-barcode') initPrintBarcodeModule();
@@ -1556,6 +1656,7 @@
         else if (input === 'MI01' || input === 'MI07' || input === 'OPNAME') switchTab('stok-opname');
         else if (input === 'ZOPR' || input === 'OPREPORT') switchTab('report-opname');
         else if (input === 'ZSTYLE' || input === 'STYLE') switchTab('rekap-style');
+        else if (input === 'ZMRP' || input === 'MRP' || input === 'KEBUTUHAN') switchTab('kebutuhan-style');
         else if (input === 'MB51') switchTab('mb51');
         else if (input === 'FSN') switchTab('fsn');
         else if (input === 'ZPRINT' || input === 'PRINT') switchTab('print-barcode');
@@ -2704,6 +2805,67 @@
         link.setAttribute('download', filename);
         link.click();
     }
+
+    // ZMRP — Kebutuhan material disimpan per kombinasi Buyer + Style.
+    function zreqEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function zreqKey(row) { return `${String(row.buyer||'').trim().toLowerCase()}||${String(row.style||'').trim().toLowerCase()}`; }
+    function zreqSetStatus(msg, success=false) { const el=document.getElementById('zreq-status'); if(el){el.textContent=msg;el.style.color=success?'#087a08':'#526579';} }
+    function zreqInitModule() {
+        const dl=document.getElementById('zreq-buyer-list');
+        if(dl) dl.innerHTML=[...new Set([...materials.map(m=>m.buyer),...kebutuhanMaterialStyle.map(r=>r.buyer)].filter(Boolean))].sort().map(b=>`<option value="${zreqEsc(b)}"></option>`).join('');
+        if(!document.getElementById('zreq-items-body').children.length) zreqAddRow();
+        zreqRenderSaved();
+    }
+    function zreqAddRow(item={}) {
+        const tbody=document.getElementById('zreq-items-body'); if(!tbody)return;
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td class="zreq-no"></td><td><input class="zreq-code" list="global-material-list" placeholder="Kode barang" value="${zreqEsc(item.code||'')}" onchange="zreqMaterialChanged(this)" oninput="zreqMaterialChanged(this)"></td><td><input class="zreq-desc" placeholder="Nama material" value="${zreqEsc(item.desc||'')}"></td><td><input class="zreq-uom" placeholder="Satuan" value="${zreqEsc(item.uom||'')}"></td><td><input class="zreq-qty" type="number" min="0" step="any" placeholder="0" value="${item.qty ?? ''}" style="text-align:right"></td><td><button type="button" class="sap-btn sap-btn-red" onclick="this.closest('tr').remove();zreqRenumber()">Hapus</button></td>`;
+        tbody.appendChild(tr); zreqRenumber();
+    }
+    function zreqRenumber(){document.querySelectorAll('#zreq-items-body tr').forEach((tr,i)=>tr.querySelector('.zreq-no').textContent=i+1);}
+    function zreqMaterialChanged(input){
+        const code=input.value.trim().toUpperCase(); const mat=materials.find(m=>String(m.code||'').toUpperCase()===code); if(!mat)return;
+        const tr=input.closest('tr'); tr.querySelector('.zreq-desc').value=mat.desc||'';tr.querySelector('.zreq-uom').value=mat.uom||'';
+    }
+    function zreqGetIdentity(){return {buyer:document.getElementById('zreq-buyer').value.trim(),style:document.getElementById('zreq-style').value.trim(),styleName:document.getElementById('zreq-style-name').value.trim()};}
+    function zreqGetItems(){return [...document.querySelectorAll('#zreq-items-body tr')].map(tr=>({code:tr.querySelector('.zreq-code').value.trim().toUpperCase(),desc:tr.querySelector('.zreq-desc').value.trim(),uom:tr.querySelector('.zreq-uom').value.trim(),qty:Number(tr.querySelector('.zreq-qty').value)||0})).filter(x=>x.code||x.desc);}
+    function zreqLoad(row){
+        zreqCurrentId=row.id;document.getElementById('zreq-buyer').value=row.buyer||'';document.getElementById('zreq-style').value=row.style||'';document.getElementById('zreq-style-name').value=row.styleName||'';
+        const body=document.getElementById('zreq-items-body');body.innerHTML='';(row.items||[]).forEach(i=>zreqAddRow(i));if(!(row.items||[]).length)zreqAddRow();
+        zreqSetStatus('Daftar kebutuhan style dipanggil. Edit jika perlu, lalu simpan kembali.',true);window.scrollTo({top:0,behavior:'smooth'});
+    }
+    function zreqLoadByIdentity(){const x=zreqGetIdentity();if(!x.buyer||!x.style){alert('Isi Buyer dan Style terlebih dahulu.');return;}const found=kebutuhanMaterialStyle.find(r=>zreqKey(r)===zreqKey(x));if(found)zreqLoad(found);else{zreqCurrentId=null;document.getElementById('zreq-items-body').innerHTML='';zreqAddRow();zreqSetStatus('Style belum memiliki daftar tersimpan. Masukkan materialnya.');}}
+    function zreqNew(){zreqCurrentId=null;['zreq-buyer','zreq-style','zreq-style-name'].forEach(id=>document.getElementById(id).value='');document.getElementById('zreq-items-body').innerHTML='';zreqAddRow();zreqSetStatus('Form baru siap.');}
+    async function zreqSave(){
+        const x=zreqGetIdentity();if(!x.buyer||!x.style||!x.styleName){alert('Buyer, Style, dan Nama Style wajib diisi.');return;}
+        const items=zreqGetItems();if(!items.length){alert('Tambahkan setidaknya satu material.');return;}
+        if(items.some(i=>!i.code||!i.desc||!i.uom)){alert('Lengkapi Kode Barang, Nama Material, dan Satuan setiap baris.');return;}
+        let found=kebutuhanMaterialStyle.find(r=>zreqKey(r)===zreqKey(x));if(found&&found.id!==zreqCurrentId){if(!confirm('Buyer + Style sudah ada. Perbarui daftar material yang tersimpan untuk style ini?'))return;zreqCurrentId=found.id;}
+        const now=new Date().toISOString();const old=kebutuhanMaterialStyle.find(r=>r.id===zreqCurrentId);const data={id:zreqCurrentId||('ZMRP_'+Date.now()),...x,items,updatedAt:now,createdAt:old?.createdAt||now};
+        if(old)kebutuhanMaterialStyle=kebutuhanMaterialStyle.map(r=>r.id===old.id?data:r);else kebutuhanMaterialStyle.push(data);zreqCurrentId=data.id;
+        localStorage.setItem('sap_kebutuhan_material_style',JSON.stringify(kebutuhanMaterialStyle));zreqRenderSaved();
+        if(cloudReady){try{await replaceCloudCollection(CLOUD_COLLECTIONS.kebutuhanMaterialStyle,kebutuhanMaterialStyle,'id');showFirebaseToast('✅ Daftar kebutuhan material berhasil tersimpan ke Firebase.');zreqSetStatus('Kebutuhan material tersimpan ke Firebase.',true);}catch(e){console.error(e);showFirebaseToast('❌ Gagal menyimpan kebutuhan material ke Firebase: '+(e.message||e),true);zreqSetStatus('Tersimpan lokal, tetapi sinkron Firebase gagal. Periksa Rules/koneksi.',false);}}
+        else{zreqSetStatus('Data tersimpan di browser. Firebase belum siap.',false);}
+    }
+    async function zreqDelete(){const x=zreqGetIdentity();const row=kebutuhanMaterialStyle.find(r=>r.id===zreqCurrentId)||kebutuhanMaterialStyle.find(r=>zreqKey(r)===zreqKey(x));if(!row){alert('Pilih atau panggil data style yang akan dihapus.');return;}if(!confirm(`Hapus kebutuhan material ${row.buyer} / ${row.style}?`))return;kebutuhanMaterialStyle=kebutuhanMaterialStyle.filter(r=>r.id!==row.id);localStorage.setItem('sap_kebutuhan_material_style',JSON.stringify(kebutuhanMaterialStyle));zreqCurrentId=null;zreqRenderSaved();if(cloudReady){try{await replaceCloudCollection(CLOUD_COLLECTIONS.kebutuhanMaterialStyle,kebutuhanMaterialStyle,'id');showFirebaseToast('Data kebutuhan material dihapus dari Firebase.');}catch(e){showFirebaseToast('Gagal menghapus dari Firebase: '+(e.message||e),true);}}zreqNew();zreqSetStatus('Data style berhasil dihapus.',true);}
+    let zreqModalRecordId = null;
+    function zreqOpenStyleModal(id){
+        const row=kebutuhanMaterialStyle.find(r=>String(r.id)===String(id));if(!row)return;
+        zreqModalRecordId=row.id;
+        document.getElementById('zreq-modal-title').textContent=`Material Style: ${row.style||''}`;
+        document.getElementById('zreq-modal-meta').textContent=`Buyer: ${row.buyer||'-'}  |  Style: ${row.style||'-'}  |  Nama Style: ${row.styleName||'-'}`;
+        const items=row.items||[];const body=document.getElementById('zreq-modal-items');
+        body.innerHTML=items.length?items.map((it,i)=>`<tr><td>${i+1}</td><td>${zreqEsc(it.code||'')}</td><td>${zreqEsc(it.desc||'')}</td><td>${zreqEsc(it.uom||'')}</td><td>${Number(it.qty||0).toLocaleString('id-ID',{maximumFractionDigits:4})}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center">Belum ada item material.</td></tr>';
+        document.getElementById('zreq-style-modal').classList.add('show');
+    }
+    function zreqCloseStyleModal(){document.getElementById('zreq-style-modal')?.classList.remove('show');}
+    function zreqEditFromModal(){const row=kebutuhanMaterialStyle.find(r=>String(r.id)===String(zreqModalRecordId));if(row)zreqLoad(row);zreqCloseStyleModal();}
+    function zreqPrintModal(){const row=kebutuhanMaterialStyle.find(r=>String(r.id)===String(zreqModalRecordId));if(!row)return;const body=(row.items||[]).map((it,i)=>`<tr><td>${i+1}</td><td>${zreqEsc(it.code||'')}</td><td>${zreqEsc(it.desc||'')}</td><td>${zreqEsc(it.uom||'')}</td><td style="text-align:right">${Number(it.qty||0).toLocaleString('id-ID',{maximumFractionDigits:4})}</td></tr>`).join('');const w=window.open('','_blank');if(!w){alert('Izinkan pop-up browser untuk mencetak.');return;}w.document.write(`<html><head><title>Material Style ${zreqEsc(row.style)}</title><style>body{font:12px Arial;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%;margin-top:14px}th,td{border:1px solid #555;padding:7px}th{background:#eee}</style></head><body><h2>DAFTAR KEBUTUHAN MATERIAL</h2><p><b>Buyer:</b> ${zreqEsc(row.buyer)} &nbsp; <b>Style:</b> ${zreqEsc(row.style)} &nbsp; <b>Nama Style:</b> ${zreqEsc(row.styleName)}</p><table><thead><tr><th>No</th><th>Kode Barang</th><th>Nama Material</th><th>Satuan</th><th>Qty per Pcs</th></tr></thead><tbody>${body}</tbody></table></body></html>`);w.document.close();w.focus();w.print();}
+    function zreqRenderSaved(){const q=(document.getElementById('zreq-search')?.value||'').trim().toLowerCase();const rows=kebutuhanMaterialStyle.filter(r=>[r.buyer,r.style,r.styleName].some(v=>String(v||'').toLowerCase().includes(q))).sort((a,b)=>(a.buyer+a.style).localeCompare(b.buyer+b.style));const tbody=document.getElementById('zreq-saved-body');if(!tbody)return;tbody.innerHTML=rows.length?rows.map((r,i)=>`<tr><td>${i+1}</td><td>${zreqEsc(r.buyer)}</td><td><button type="button" class="zreq-style-link" title="Klik untuk melihat daftar material" onclick="zreqOpenStyleModal('${zreqEsc(r.id)}')">${zreqEsc(r.style)}</button></td><td>${zreqEsc(r.styleName)}</td><td>${(r.items||[]).length}</td><td><button type="button" class="sap-btn" onclick="zreqLoad(kebutuhanMaterialStyle.find(x=>x.id==='${zreqEsc(r.id)}'))">Pilih / Edit</button></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:12px;">Belum ada style tersimpan.</td></tr>';document.getElementById('zreq-count').textContent=`Total ${rows.length} style`;const dl=document.getElementById('zreq-buyer-list');if(dl)dl.innerHTML=[...new Set(kebutuhanMaterialStyle.map(r=>r.buyer).filter(Boolean))].sort().map(b=>`<option value="${zreqEsc(b)}"></option>`).join('');}
+    function zreqExport(){const rows=[['Buyer','Style','Nama Style','Kode Barang','Nama Material','Satuan','Qty per Pcs']];kebutuhanMaterialStyle.forEach(r=>(r.items||[]).forEach(i=>rows.push([r.buyer,r.style,r.styleName,i.code,i.desc,i.uom,i.qty])));const csv='\ufeff'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Daftar_Kebutuhan_Material_Buyer_Style.csv';a.click();URL.revokeObjectURL(a.href);}
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')zreqCloseStyleModal();});
+    function zreqPrint(){const x=zreqGetIdentity(),items=zreqGetItems();const body=items.map((i,n)=>`<tr><td>${n+1}</td><td>${zreqEsc(i.code)}</td><td>${zreqEsc(i.desc)}</td><td>${zreqEsc(i.uom)}</td><td style="text-align:right">${Number(i.qty).toLocaleString('id-ID',{maximumFractionDigits:4})}</td></tr>`).join('');const w=window.open('','_blank');if(!w){alert('Izinkan pop-up browser untuk mencetak.');return;}w.document.write(`<html><head><title>Daftar Kebutuhan Material</title><style>body{font:12px Arial;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%;margin-top:14px}th,td{border:1px solid #555;padding:6px}th{background:#eee}</style></head><body><h2>DAFTAR KEBUTUHAN MATERIAL</h2><p><b>Buyer:</b> ${zreqEsc(x.buyer)} &nbsp; <b>Style:</b> ${zreqEsc(x.style)} &nbsp; <b>Nama Style:</b> ${zreqEsc(x.styleName)}</p><table><thead><tr><th>No</th><th>Kode Barang</th><th>Nama Material</th><th>Satuan</th><th>Qty per Pcs</th></tr></thead><tbody>${body}</tbody></table></body></html>`);w.document.close();w.focus();w.print();}
+
 </script>
 </body>
 </html>
