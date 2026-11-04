@@ -555,7 +555,7 @@
 
     <!-- SAP Menu Bar -->
     <div class="sap-menubar">
-        <span class="sap-menu-item">Menu</span>
+        <span class="sap-menu-item" role="button" tabindex="0" onclick="openAccessMenu()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAccessMenu();}">Menu</span>
         <span class="sap-menu-item">Edit</span>
         <span class="sap-menu-item">Goto</span>
         <span class="sap-menu-item">Extras</span>
@@ -1424,6 +1424,7 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    window.inventoryGudangAuth = auth;
     const db = firebase.firestore();
 
     let materials = JSON.parse(localStorage.getItem('sap_materials')) || DEFAULT_MATERIALS;
@@ -2034,6 +2035,7 @@
         const reorder = parseFloat(document.getElementById('mm-reorder').value) || 0;
 
         const existingIndex = materials.findIndex(m => m.code === code);
+        if (existingIndex >= 0 && !window.isAdminMode()) { alert('Mengubah master material hanya dapat dilakukan Admin.'); return; }
         if (existingIndex >= 0) materials[existingIndex] = { code, desc, buyer, uom, reorder };
         else materials.push({ code, desc, buyer, uom, reorder });
 
@@ -2840,7 +2842,7 @@
         const x=zreqGetIdentity();if(!x.buyer||!x.style||!x.styleName){alert('Buyer, Style, dan Nama Style wajib diisi.');return;}
         const items=zreqGetItems();if(!items.length){alert('Tambahkan setidaknya satu material.');return;}
         if(items.some(i=>!i.code||!i.desc||!i.uom)){alert('Lengkapi Kode Barang, Nama Material, dan Satuan setiap baris.');return;}
-        let found=kebutuhanMaterialStyle.find(r=>zreqKey(r)===zreqKey(x));if(found&&found.id!==zreqCurrentId){if(!confirm('Buyer + Style sudah ada. Perbarui daftar material yang tersimpan untuk style ini?'))return;zreqCurrentId=found.id;}
+        let found=kebutuhanMaterialStyle.find(r=>zreqKey(r)===zreqKey(x));if(found&&!window.isAdminMode()){alert('Mengubah kebutuhan material yang sudah tersimpan hanya dapat dilakukan Admin.');return;}if(found&&found.id!==zreqCurrentId){if(!confirm('Buyer + Style sudah ada. Perbarui daftar material yang tersimpan untuk style ini?'))return;zreqCurrentId=found.id;}
         const now=new Date().toISOString();const old=kebutuhanMaterialStyle.find(r=>r.id===zreqCurrentId);const data={id:zreqCurrentId||('ZMRP_'+Date.now()),...x,items,updatedAt:now,createdAt:old?.createdAt||now};
         if(old)kebutuhanMaterialStyle=kebutuhanMaterialStyle.map(r=>r.id===old.id?data:r);else kebutuhanMaterialStyle.push(data);zreqCurrentId=data.id;
         localStorage.setItem('sap_kebutuhan_material_style',JSON.stringify(kebutuhanMaterialStyle));zreqRenderSaved();
@@ -2867,5 +2869,138 @@
     function zreqPrint(){const x=zreqGetIdentity(),items=zreqGetItems();const body=items.map((i,n)=>`<tr><td>${n+1}</td><td>${zreqEsc(i.code)}</td><td>${zreqEsc(i.desc)}</td><td>${zreqEsc(i.uom)}</td><td style="text-align:right">${Number(i.qty).toLocaleString('id-ID',{maximumFractionDigits:4})}</td></tr>`).join('');const w=window.open('','_blank');if(!w){alert('Izinkan pop-up browser untuk mencetak.');return;}w.document.write(`<html><head><title>Daftar Kebutuhan Material</title><style>body{font:12px Arial;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%;margin-top:14px}th,td{border:1px solid #555;padding:6px}th{background:#eee}</style></head><body><h2>DAFTAR KEBUTUHAN MATERIAL</h2><p><b>Buyer:</b> ${zreqEsc(x.buyer)} &nbsp; <b>Style:</b> ${zreqEsc(x.style)} &nbsp; <b>Nama Style:</b> ${zreqEsc(x.styleName)}</p><table><thead><tr><th>No</th><th>Kode Barang</th><th>Nama Material</th><th>Satuan</th><th>Qty per Pcs</th></tr></thead><tbody>${body}</tbody></table></body></html>`);w.document.close();w.focus();w.print();}
 
 </script>
+
+<style>
+/* Mode akses Inventory Gudang */
+#access-gate{position:fixed;inset:0;z-index:999999;background:rgba(12,25,43,.88);display:flex;align-items:center;justify-content:center;padding:18px;font-family:Arial,sans-serif}
+#access-gate .gate-card{width:min(420px,100%);background:#fff;border-radius:14px;padding:26px;box-shadow:0 18px 60px #0005;text-align:center}
+#access-gate h2{margin:0 0 8px;color:#18324e}#access-gate p{color:#64748b;font-size:13px;line-height:1.5}
+#access-gate input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:7px;margin:8px 0;font-size:16px;box-sizing:border-box}
+#access-gate button,.access-toolbar button{border:0;border-radius:7px;padding:11px 16px;cursor:pointer;font-weight:600}
+.gate-primary{background:#1e90ff;color:white;width:100%;margin-top:8px}.gate-secondary{background:#e8eef5;color:#18324e;width:100%;margin-top:8px}
+#gate-error{color:#c62828;min-height:18px;font-size:13px;margin-top:8px}
+.access-toolbar{position:sticky;top:0;z-index:9000;background:#eaf3fc;border:1px solid #b7d5f5;padding:7px 12px;display:flex;justify-content:flex-end;align-items:center;gap:9px;font-size:12px}
+.access-toolbar button{padding:7px 11px;background:#1e90ff;color:white}.access-toolbar .logout{background:#526579}
+body.access-general [data-admin-only="true"]{display:none!important}
+body.access-general .general-hide-action{display:none!important}
+</style>
+<div id="access-gate" role="dialog" aria-modal="true" style="display:none">
+ <div class="gate-card">
+  <div style="font-size:34px">📦</div><h2>INVENTORY GUDANG</h2>
+  <p>Pilih mode penggunaan aplikasi</p>
+  <button class="gate-primary" type="button" onclick="enterGeneralMode()">MASUK MODE UMUM</button>
+  <div style="height:1px;background:#e2e8f0;margin:18px 0"></div>
+  <strong style="color:#18324e">Login Admin Firebase</strong>
+  <input id="admin-email-entry" type="email" value="dwielan17@gmail.com" readonly autocomplete="username">
+  <input id="admin-password-entry" type="password" placeholder="Password akun Firebase Admin" autocomplete="current-password">
+  <button class="gate-primary" type="button" onclick="enterAdminMode()">LOGIN ADMIN</button>
+  <div id="gate-error"></div>
+  <p style="font-size:11px;margin-bottom:0">Mode Umum untuk input data. Edit dan hapus tersedia setelah login Admin.</p>
+ </div>
+</div>
+<div id="access-toolbar" class="access-toolbar" style="display:none">
+ <strong id="access-mode-label">Mode Umum</strong>
+ <button id="change-admin-password-btn" type="button" onclick="changeAdminPassword()" style="display:none">Ganti Password Admin</button>
+ <span style="color:#526579">Klik menu <b>Menu</b> untuk mengganti mode</span>
+</div>
+<script>
+(function(){
+ 'use strict';
+ const ADMIN_EMAIL='dwielan17@gmail.com';
+ let adminMode=false;
+ const $=id=>document.getElementById(id);
+ function firebaseAuth(){return window.inventoryGudangAuth;}
+ function showApp(mode){
+   adminMode=mode;
+   document.body.classList.toggle('access-general',!mode);
+   $('access-gate').style.display='none';$('access-toolbar').style.display='flex';
+   $('access-mode-label').textContent=mode?'MODE ADMIN — AKSES PENUH':'MODE UMUM — INPUT SAJA';
+   $('change-admin-password-btn').style.display=mode?'inline-block':'none';
+   refreshAdminControls();applyActionColumnVisibility();
+ }
+ window.enterGeneralMode=async function(){
+   const a=firebaseAuth();
+   try{
+     if(a && a.currentUser && !a.currentUser.isAnonymous) await a.signOut();
+     if(a && !a.currentUser) await a.signInAnonymously();
+     showApp(false);
+   }catch(e){$('gate-error').textContent='Gagal masuk Mode Umum: '+(e.message||e);}
+ };
+ window.openAccessMenu=function(){ $('gate-error').textContent=''; $('admin-password-entry').value=''; $('access-gate').style.display='flex'; };
+ window.switchAccessMode=function(){window.openAccessMenu();};
+ window.enterAdminMode=async function(){
+   const pass=$('admin-password-entry').value;
+   if(!pass){$('gate-error').textContent='Masukkan password akun Firebase Admin.';return;}
+   const a=firebaseAuth();
+   if(!a){$('gate-error').textContent='Firebase Authentication belum siap. Muat ulang halaman.';return;}
+   try{
+     const credential=await a.signInWithEmailAndPassword(ADMIN_EMAIL,pass);
+     if(!credential.user || (credential.user.email||'').toLowerCase()!==ADMIN_EMAIL){await a.signOut();throw new Error('Akun ini bukan akun Admin yang diizinkan.');}
+     $('admin-password-entry').value='';$('gate-error').textContent='';showApp(true);
+   }catch(e){
+     const msg=({'auth/invalid-credential':'Email atau password Admin salah.','auth/wrong-password':'Password Admin salah.','auth/user-not-found':'Akun Admin belum dibuat di Firebase Authentication.','auth/too-many-requests':'Terlalu banyak percobaan. Coba lagi nanti.','auth/network-request-failed':'Koneksi internet bermasalah.'})[e.code]||e.message||'Login Admin gagal.';
+     $('gate-error').textContent=msg;
+   }
+ };
+ window.switchAccessMode=function(){adminMode=false;window.openAccessMenu();refreshAdminControls();};
+ window.changeAdminPassword=async function(){
+   if(!adminMode)return;
+   const a=firebaseAuth(), user=a&&a.currentUser;
+   if(!user || (user.email||'').toLowerCase()!==ADMIN_EMAIL){alert('Sesi Admin Firebase tidak ditemukan. Silakan login kembali.');return;}
+   const oldPass=prompt('Masukkan password Admin saat ini:');if(oldPass===null)return;
+   const newPass=prompt('Masukkan password Admin baru (minimal 8 karakter):');if(newPass===null)return;
+   if(newPass.length<8){alert('Password minimal 8 karakter.');return;}
+   const confirmPass=prompt('Ulangi password Admin baru:');if(confirmPass!==newPass){alert('Konfirmasi password tidak sama.');return;}
+   try{
+     const credential=firebase.auth.EmailAuthProvider.credential(ADMIN_EMAIL,oldPass);
+     await user.reauthenticateWithCredential(credential);
+     await user.updatePassword(newPass);
+     alert('Password Admin Firebase berhasil diganti. Password baru berlaku di semua perangkat.');
+   }catch(e){alert((e.code==='auth/wrong-password'?'Password saat ini salah. ':e.message||'')+' Gagal mengganti password.');}
+ };
+ window.isAdminMode=()=>adminMode;
+ window.requireAdminAccess=function(action){if(adminMode)return true;alert('Aksi '+(action||'ini')+' hanya dapat dilakukan oleh Admin. Login kembali menggunakan akun Admin Firebase.');return false;};
+ const adminWords=/\b(edit|hapus|delete|approve|setujui)\b/i;
+ function protectClick(e){
+   if(adminMode)return;
+   const button=e.target.closest('button');if(!button)return;
+   const label=(button.innerText||button.textContent||'').trim();
+   if(adminWords.test(label)){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.requireAdminAccess(label);}
+ }
+ document.addEventListener('click',protectClick,true);
+ function applyActionColumnVisibility(){
+   document.querySelectorAll('table').forEach(table=>{
+     const rows=[...table.querySelectorAll('tr')];let actionIndexes=[];
+     rows.forEach(row=>{[...row.children].forEach((cell,index)=>{if(cell.tagName==='TH' && /^(aksi|action)$/i.test((cell.textContent||'').trim()))actionIndexes.push(index);});});
+     rows.forEach(row=>actionIndexes.forEach(index=>{const cell=row.children[index];if(cell)cell.classList.toggle('general-hide-action',!adminMode);}));
+   });
+ }
+ function refreshAdminControls(){
+   document.querySelectorAll('button').forEach(b=>{const label=(b.innerText||b.textContent||'').trim();if(adminWords.test(label)){b.dataset.adminOnly='true';b.style.display=adminMode?'':'none';}});
+   applyActionColumnVisibility();
+ }
+ const observer=new MutationObserver(()=>refreshAdminControls());
+ observer.observe(document.documentElement,{childList:true,subtree:true});
+ document.addEventListener('submit',function(e){if(adminMode)return;if(e.target&&e.target.id==='form-edit-mutasi'){e.preventDefault();e.stopImmediatePropagation();window.requireAdminAccess('edit mutasi');}},true);
+ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&$('access-gate').style.display!=='none'&&document.activeElement===$('admin-password-entry'))window.enterAdminMode();});
+ window.addEventListener('DOMContentLoaded', async () => {
+    try {
+        if (auth && !auth.currentUser) await auth.signInAnonymously();
+        // Langsung masuk ke Mode Umum tanpa memunculkan kotak login otomatis
+        showApp(false);
+    } catch(e) {
+        console.error(e);
+    }
+    refreshAdminControls();
+});
+ function wrapGuard(name,predicate){const original=window[name];if(typeof original!=='function')return;window[name]=function(...args){if(!adminMode&&predicate(...args)){window.requireAdminAccess(name);return;}return original.apply(this,args);};}
+ window.addEventListener('load',()=>{
+   ['editMaterial','deleteMaterial','openEditMutasiModal','saveEditMutasi','deleteMutasiItem','deletePO','approvePO','zreqDelete','zreqEditFromModal'].forEach(n=>wrapGuard(n,()=>true));
+   wrapGuard('zreqSave',()=>{try{const x=window.zreqGetIdentity();return Array.isArray(window.kebutuhanMaterialStyle)&&window.kebutuhanMaterialStyle.some(r=>String(r.buyer).toLowerCase()===x.buyer.toLowerCase()&&String(r.style).toLowerCase()===x.style.toLowerCase());}catch(e){return false;}});
+ });
+ showApp(false);
+})();
+</script>
+
 </body>
 </html>
