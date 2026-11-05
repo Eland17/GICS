@@ -2918,7 +2918,7 @@ body.access-general .general-hide-action{display:none!important}
   <button class="gate-primary" type="button" onclick="enterGeneralMode()">MASUK MODE UMUM</button>
   <div style="height:1px;background:#e2e8f0;margin:18px 0"></div>
   <strong style="color:#18324e">Login Admin Firebase</strong>
-  <input id="admin-email-entry" type="email" value="dwielan17@gmail.com" readonly autocomplete="username">
+  <input id="admin-email-entry" type="email" placeholder="Masukkan alamat email Admin" autocomplete="off" autocapitalize="none" spellcheck="false" required>
   <input id="admin-password-entry" type="password" placeholder="Password akun Firebase Admin" autocomplete="current-password">
   <button class="gate-primary" type="button" onclick="enterAdminMode()">LOGIN ADMIN</button>
   <div id="gate-error"></div>
@@ -2953,15 +2953,18 @@ body.access-general .general-hide-action{display:none!important}
      showApp(false);
    }catch(e){$('gate-error').textContent='Gagal masuk Mode Umum: '+(e.message||e);}
  };
- window.openAccessMenu=function(){ $('gate-error').textContent=''; $('admin-password-entry').value=''; $('access-gate').style.display='flex'; };
+ window.openAccessMenu=function(){ $('gate-error').textContent=''; $('admin-email-entry').value=''; $('admin-password-entry').value=''; $('access-gate').style.display='flex'; };
  window.switchAccessMode=function(){window.openAccessMenu();};
  window.enterAdminMode=async function(){
+   const email=$('admin-email-entry').value.trim().toLowerCase();
    const pass=$('admin-password-entry').value;
+   if(!email){$('gate-error').textContent='Masukkan alamat email Admin.';return;}
+   if(email!==ADMIN_EMAIL){$('gate-error').textContent='Email ini tidak terdaftar sebagai Admin yang diizinkan.';return;}
    if(!pass){$('gate-error').textContent='Masukkan password akun Firebase Admin.';return;}
    const a=firebaseAuth();
    if(!a){$('gate-error').textContent='Firebase Authentication belum siap. Muat ulang halaman.';return;}
    try{
-     const credential=await a.signInWithEmailAndPassword(ADMIN_EMAIL,pass);
+     const credential=await a.signInWithEmailAndPassword(email,pass);
      if(!credential.user || (credential.user.email||'').toLowerCase()!==ADMIN_EMAIL){await a.signOut();throw new Error('Akun ini bukan akun Admin yang diizinkan.');}
      $('admin-password-entry').value='';$('gate-error').textContent='';showApp(true);
    }catch(e){
