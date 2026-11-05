@@ -520,6 +520,9 @@
         .zreq-table td.left { text-align:left; }
         .zreq-table td.right { text-align:right; }
         .zreq-buttons { display:flex; gap:5px; flex-wrap:wrap; margin:8px 0; }
+        .zreq-page-nav{display:flex;gap:6px;flex-wrap:wrap;padding:3px 2px}
+        .zreq-page-nav .sap-btn{min-width:150px;justify-content:center}
+
         .zreq-saved { margin-top:10px; }
         @media(max-width:700px){.zreq-grid{grid-template-columns:1fr}.zreq-table{min-width:690px}}
 
@@ -1022,42 +1025,57 @@
         </div>
 
 
-        <!-- MODUL ZMRP: DAFTAR KEBUTUHAN MATERIAL PER BUYER & STYLE -->
+        <!-- MODUL ZMRP: INPUT DAN DAFTAR STYLE DALAM SATU MODUL -->
         <div id="view-kebutuhan-style" style="display:none;">
-            <div class="sap-panel">
-                <div class="sap-panel-title">Daftar Kebutuhan Material Buyer & Style (ZMRP) — Input Manual / Repeat Order</div>
-                <div class="zreq-grid">
-                    <div><label for="zreq-buyer">Buyer *</label><input id="zreq-buyer" list="zreq-buyer-list" placeholder="Pilih / ketik buyer"><datalist id="zreq-buyer-list"></datalist></div>
-                    <div><label for="zreq-style">Style *</label><input id="zreq-style" placeholder="Kode style"></div>
-                    <div><label for="zreq-style-name">Nama Style *</label><input id="zreq-style-name" placeholder="Nama / deskripsi style"></div>
-                </div>
-                <div class="zreq-buttons">
-                    <button type="button" class="sap-btn" onclick="zreqNew()">Style Baru</button>
-                    <button type="button" class="sap-btn" onclick="zreqLoadByIdentity()">Panggil Style</button>
-                    <button type="button" class="sap-btn sap-btn-green" onclick="zreqSave()">Simpan Kebutuhan</button>
-                    <button type="button" class="sap-btn sap-btn-red" onclick="zreqDelete()">Hapus Style</button>
-                </div>
-                <div id="zreq-status" style="font-size:12px;color:#526579;margin:4px 0 8px;">Isi Buyer, Style, dan Nama Style. Untuk repeat order, panggil style yang sudah tersimpan.</div>
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0;">
-                    <strong>Item Kebutuhan Material</strong><button type="button" class="sap-btn" onclick="zreqAddRow()">+ Tambah Material</button>
-                </div>
-                <div class="sap-grid-container" style="max-height:300px;overflow:auto;">
-                    <table class="zreq-table"><thead><tr><th>No</th><th>Kode Barang</th><th>Nama Material</th><th>Satuan</th><th>Qty per Pcs</th><th>Aksi</th></tr></thead><tbody id="zreq-items-body"></tbody></table>
-                </div>
-                <div class="zreq-buttons">
-                    <button type="button" class="sap-btn sap-btn-green" onclick="zreqSave()">Simpan Kebutuhan</button>
-                    <button type="button" class="sap-btn" onclick="zreqPrint()">Cetak</button>
-                    <button type="button" class="sap-btn" onclick="zreqExport()">Export CSV</button>
+            <div class="sap-panel" style="padding:7px;">
+                <div class="sap-panel-title">Kebutuhan Material (ZMRP)</div>
+                <div class="zreq-page-nav">
+                    <button type="button" id="zreq-nav-input" class="sap-btn" onclick="zreqShowPage('input')">✏️ Input Kebutuhan</button>
+                    <button type="button" id="zreq-nav-list" class="sap-btn sap-btn-green" onclick="zreqShowPage('list')">📋 Daftar Style Tersimpan</button>
                 </div>
             </div>
-            <div class="sap-panel zreq-saved">
-                <div class="sap-panel-title">Daftar Style Tersimpan</div>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-                    <input id="zreq-search" oninput="zreqRenderSaved()" placeholder="Cari buyer, style, nama style..." style="max-width:420px;padding:6px;border:1px solid #9eacba;border-radius:3px;">
-                    <span id="zreq-count" style="font-weight:bold;color:#000080;"></span>
+
+            <div id="zreq-page-input" style="display:none;">
+                <div class="sap-panel">
+                    <div class="sap-panel-title">Input Kebutuhan Material Buyer & Style — Manual / Repeat Order</div>
+                    <div class="zreq-grid">
+                        <div><label for="zreq-buyer">Buyer *</label><input id="zreq-buyer" list="zreq-buyer-list" placeholder="Pilih / ketik buyer"><datalist id="zreq-buyer-list"></datalist></div>
+                        <div><label for="zreq-style">Style *</label><input id="zreq-style" placeholder="Kode style"></div>
+                        <div><label for="zreq-style-name">Nama Style *</label><input id="zreq-style-name" placeholder="Nama / deskripsi style"></div>
+                    </div>
+                    <div class="zreq-buttons">
+                        <button type="button" class="sap-btn" onclick="zreqNew()">Style Baru</button>
+                        <button type="button" class="sap-btn" onclick="zreqLoadByIdentity()">Panggil Style</button>
+                        <button type="button" class="sap-btn sap-btn-green" onclick="zreqSave()">Simpan Kebutuhan</button>
+                        <button type="button" class="sap-btn sap-btn-red" onclick="zreqDelete()">Hapus Style</button>
+                    </div>
+                    <div id="zreq-status" style="font-size:12px;color:#526579;margin:4px 0 8px;">Isi Buyer, Style, dan Nama Style. Untuk repeat order, panggil style yang sudah tersimpan.</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0;">
+                        <strong>Item Kebutuhan Material</strong><button type="button" class="sap-btn" onclick="zreqAddRow()">+ Tambah Material</button>
+                    </div>
+                    <div class="sap-grid-container" style="max-height:300px;overflow:auto;">
+                        <table class="zreq-table"><thead><tr><th>No</th><th>Kode Barang</th><th>Nama Material</th><th>Satuan</th><th>Qty per Pcs</th><th>Aksi</th></tr></thead><tbody id="zreq-items-body"></tbody></table>
+                    </div>
+                    <div class="zreq-buttons">
+                        <button type="button" class="sap-btn sap-btn-green" onclick="zreqSave()">Simpan Kebutuhan</button>
+                        <button type="button" class="sap-btn" onclick="zreqPrint()">Cetak</button>
+                        <button type="button" class="sap-btn" onclick="zreqExport()">Export CSV</button>
+                        <button type="button" class="sap-btn" onclick="zreqShowPage('list')">Lihat Daftar Style ▶</button>
+                    </div>
                 </div>
-                <div class="sap-grid-container" style="max-height:300px;overflow:auto;">
-                    <table class="sap-grid"><thead><tr><th>No</th><th>Buyer</th><th>Style</th><th>Nama Style</th><th>Jumlah Material</th><th>Aksi</th></tr></thead><tbody id="zreq-saved-body"></tbody></table>
+            </div>
+
+            <div id="zreq-page-list">
+                <div class="sap-panel zreq-saved">
+                    <div class="sap-panel-title">Daftar Style Tersimpan</div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+                        <input id="zreq-search" oninput="zreqRenderSaved()" placeholder="Cari buyer, style, nama style..." style="max-width:420px;padding:6px;border:1px solid #9eacba;border-radius:3px;">
+                        <span id="zreq-count" style="font-weight:bold;color:#000080;"></span>
+                        <button type="button" class="sap-btn" onclick="zreqShowPage('input');zreqNew()">+ Input Style Baru</button>
+                    </div>
+                    <div class="sap-grid-container" style="max-height:420px;overflow:auto;">
+                        <table class="sap-grid"><thead><tr><th>No</th><th>Buyer</th><th>Style</th><th>Nama Style</th><th>Jumlah Material</th><th>Aksi</th></tr></thead><tbody id="zreq-saved-body"></tbody></table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2812,11 +2830,20 @@
     function zreqEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function zreqKey(row) { return `${String(row.buyer||'').trim().toLowerCase()}||${String(row.style||'').trim().toLowerCase()}`; }
     function zreqSetStatus(msg, success=false) { const el=document.getElementById('zreq-status'); if(el){el.textContent=msg;el.style.color=success?'#087a08':'#526579';} }
+    function zreqShowPage(page) {
+        const isInput = page !== 'list';
+        document.getElementById('zreq-page-input').style.display = isInput ? 'block' : 'none';
+        document.getElementById('zreq-page-list').style.display = isInput ? 'none' : 'block';
+        document.getElementById('zreq-nav-input').classList.toggle('sap-btn-green', isInput);
+        document.getElementById('zreq-nav-list').classList.toggle('sap-btn-green', !isInput);
+        if (!isInput) zreqRenderSaved();
+    }
     function zreqInitModule() {
         const dl=document.getElementById('zreq-buyer-list');
         if(dl) dl.innerHTML=[...new Set([...materials.map(m=>m.buyer),...kebutuhanMaterialStyle.map(r=>r.buyer)].filter(Boolean))].sort().map(b=>`<option value="${zreqEsc(b)}"></option>`).join('');
         if(!document.getElementById('zreq-items-body').children.length) zreqAddRow();
         zreqRenderSaved();
+        zreqShowPage('list');
     }
     function zreqAddRow(item={}) {
         const tbody=document.getElementById('zreq-items-body'); if(!tbody)return;
@@ -2834,7 +2861,7 @@
     function zreqLoad(row){
         zreqCurrentId=row.id;document.getElementById('zreq-buyer').value=row.buyer||'';document.getElementById('zreq-style').value=row.style||'';document.getElementById('zreq-style-name').value=row.styleName||'';
         const body=document.getElementById('zreq-items-body');body.innerHTML='';(row.items||[]).forEach(i=>zreqAddRow(i));if(!(row.items||[]).length)zreqAddRow();
-        zreqSetStatus('Daftar kebutuhan style dipanggil. Edit jika perlu, lalu simpan kembali.',true);window.scrollTo({top:0,behavior:'smooth'});
+        zreqSetStatus('Daftar kebutuhan style dipanggil. Edit jika perlu, lalu simpan kembali.',true);zreqShowPage('input');document.getElementById('zreq-page-input').scrollIntoView({behavior:'smooth',block:'start'});
     }
     function zreqLoadByIdentity(){const x=zreqGetIdentity();if(!x.buyer||!x.style){alert('Isi Buyer dan Style terlebih dahulu.');return;}const found=kebutuhanMaterialStyle.find(r=>zreqKey(r)===zreqKey(x));if(found)zreqLoad(found);else{zreqCurrentId=null;document.getElementById('zreq-items-body').innerHTML='';zreqAddRow();zreqSetStatus('Style belum memiliki daftar tersimpan. Masukkan materialnya.');}}
     function zreqNew(){zreqCurrentId=null;['zreq-buyer','zreq-style','zreq-style-name'].forEach(id=>document.getElementById(id).value='');document.getElementById('zreq-items-body').innerHTML='';zreqAddRow();zreqSetStatus('Form baru siap.');}
