@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAP R/3 Enterprise - Warehouse Inventory Control System</title>
+    <title>SAP R/3 Enterprise - Garment Inventory Control System</title>
     <!-- Firebase compat SDK: Auth + Cloud Firestore -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
@@ -619,6 +619,12 @@
                     <div class="dash-card"><div class="dash-label">Total Buyer</div><div class="dash-value" id="dash-total-buyer">0</div></div>
                     <div class="dash-card"><div class="dash-label">Material Reorder Alert</div><div class="dash-value" id="dash-reorder-count" style="color:#b00000">0</div></div>
                     <div class="dash-card"><div class="dash-label">Material Stok Aman</div><div class="dash-value" id="dash-safe-count" style="color:#087a08">0</div></div>
+                </div>
+                <div class="dash-panel" style="margin-bottom:8px;">
+                    <div class="dash-panel-title">Total Qty Stok Berdasarkan Satuan (UoM)</div>
+                    <div id="dashboard-uom-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;">
+                        <div style="color:#666;">Belum ada data stok.</div>
+                    </div>
                 </div>
                 <div class="dash-layout">
                     <div class="dash-panel">
@@ -2223,6 +2229,25 @@
         document.getElementById('dash-reorder-count').textContent = alerts.length.toLocaleString('id-ID');
         document.getElementById('dash-safe-count').textContent = (materials.length - alerts.length).toLocaleString('id-ID');
 
+        // Rekap saldo stok dikelompokkan berdasarkan satuan agar satuan berbeda
+        // (PCS, ROLL, KG, MTR, YDS, dll.) tidak dijumlahkan menjadi satu angka.
+        const qtyByUom = {};
+        materials.forEach(mat => {
+            const uom = String(mat.uom || 'TANPA SATUAN').trim().toUpperCase();
+            qtyByUom[uom] = (qtyByUom[uom] || 0) + Number(stockMap[mat.code] || 0);
+        });
+        const uomSummary = document.getElementById('dashboard-uom-summary');
+        const uomEntries = Object.entries(qtyByUom).sort((a, b) => a[0].localeCompare(b[0]));
+        if (uomSummary) {
+            uomSummary.innerHTML = uomEntries.length
+                ? uomEntries.map(([uom, qty]) => `
+                    <div style="background:#f5f8fc;border:1px solid #c7d3e0;border-left:3px solid #104e8b;padding:9px 11px;min-width:0;">
+                        <div style="font-weight:bold;color:#555;margin-bottom:5px;">${uom}</div>
+                        <div style="font-size:20px;font-weight:bold;color:#104e8b;overflow-wrap:anywhere;">${qty.toLocaleString('id-ID',{maximumFractionDigits:2})}</div>
+                    </div>`).join('')
+                : '<div style="color:#666;">Belum ada data stok.</div>';
+        }
+
         const chart = document.getElementById('dashboard-buyer-chart');
         const buyerEntries = Object.entries(buyers).sort((a,b) => b[1] - a[1]);
         if (!buyerEntries.length) chart.innerHTML = '<div style="color:#666">Belum ada data.</div>';
@@ -2918,8 +2943,8 @@ body.access-general .general-hide-action{display:none!important}
   <button class="gate-primary" type="button" onclick="enterGeneralMode()">MASUK MODE UMUM</button>
   <div style="height:1px;background:#e2e8f0;margin:18px 0"></div>
   <strong style="color:#18324e">Login Admin Firebase</strong>
-  <input id="admin-email-entry" type="email" placeholder="Masukkan alamat email" autocomplete="off" autocapitalize="none" spellcheck="false" required>
-  <input id="admin-password-entry" type="password" placeholder="Password" autocomplete="current-password">
+  <input id="admin-email-entry" type="email" placeholder="Masukkan alamat email Admin" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+  <input id="admin-password-entry" type="password" placeholder="Password akun Firebase Admin" autocomplete="current-password">
   <button class="gate-primary" type="button" onclick="enterAdminMode()">LOGIN ADMIN</button>
   <div id="gate-error"></div>
   <p style="font-size:11px;margin-bottom:0">Mode Umum untuk input data. Edit dan hapus tersedia setelah login Admin.</p>
