@@ -394,19 +394,25 @@
         #print-sheet-container { display: none; }
         .no-print { display: block; }
 
-        /* SKALA DESKTOP: tampilan diperbesar 15% dan tetap pas dalam layar */
-        @media (min-width: 1024px) {
-            body {
-                zoom: 1.15;
-                width: 86.956522vw;
-                height: 86.956522vh;
-            }
-            .sap-window {
-                width: 100%;
-                height: calc(86.956522vh - 8px);
-            }
-        }
-
+    /* TAMPILAN DESKTOP OTOMATIS FIT */
+@media (min-width: 1024px) {
+    html, body {
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+    }
+    body {
+        padding: 6px; /* Memberikan sedikit ruang/margin luar agar terlihat rapi */
+    }
+    .sap-window {
+        width: 100%;
+        height: calc(100vh - 12px);
+        height: calc(100dvh - 12px);
+        display: flex;
+        flex-direction: column;
+    }
+}
         /* RESPONSIVE MOBILE OPTIMIZATION KHUSUS XIAOMI REDMI NOTE 7 (STOK BARANG MMBE) */
         @media(max-width: 768px) {
             body { 
@@ -438,7 +444,7 @@
             }
 
             .sap-btn { padding: 2px 6px; height: 24px; }
-            .sap-titlebar span:nth-child(2) { display: none; }
+            .sap-titlebar #offline-sync-indicator { display: flex !important; max-width: 55vw; }
         }
 
         /* Kunci halaman pada ukuran layar; area isi modul yang bergerak bila konten panjang. */
@@ -544,12 +550,16 @@
         @media(max-width:600px){#zreq-style-modal{padding:7px}#zreq-style-modal .zreq-modal-card{padding:11px;max-height:92vh}}
 
 
+        /* Indikator sinkronisasi ditempatkan di sisi kanan Title Bar */
+        .sap-titlebar #offline-sync-indicator {
+            position: static; z-index: auto; max-width: min(58vw, 390px);
+            padding: 3px 8px; border-radius: 3px; font-size: 10px;
+            line-height: 1.3; box-shadow: none; display: flex !important;
+            gap: 5px; align-items: center; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;
+        }
         #offline-sync-indicator {
-            position: fixed; right: 14px; bottom: 58px; z-index: 9998;
-            max-width: min(92vw, 390px); padding: 9px 13px; border-radius: 10px;
-            background: #243447; color: #fff; font-size: 12px; line-height: 1.4;
-            box-shadow: 0 3px 14px rgba(0,0,0,.22); display: flex; gap: 8px;
-            align-items: center;
+            background: #243447; color: #fff;
         }
         #offline-sync-indicator[data-state="pending"] { background: #8a5a00; }
         #offline-sync-indicator[data-state="error"] { background: #a32626; }
@@ -564,14 +574,13 @@
 </head>
 <body>
 
-<div id="offline-sync-indicator" data-state="success" role="status" aria-live="polite">☁️ Sinkronisasi siap</div>
 <div id="firebase-save-toast" role="status" aria-live="polite"></div>
 
 <div class="sap-window">
     <!-- SAP Title Bar -->
     <div class="sap-titlebar">
         <span>[PRD/100] SAP R/3 Enterprise - Garment Inventory Control System</span>
-        <span>Client: 100 | User: SAPUSER</span>
+        <div id="offline-sync-indicator" data-state="success" role="status" aria-live="polite">☁️ Sinkronisasi siap</div>
     </div>
 
     <!-- SAP Menu Bar -->
@@ -1482,7 +1491,7 @@
     let cloudReady = false;
     let cloudSaveQueue = Promise.resolve();
 
-    const ITEMS_PER_PAGE = 25;
+    const ITEMS_PER_PAGE = 20;
     let masterCurrentPage = 1;
     let stockCurrentPage = 1;
     let mutasiCurrentPage = 1;
