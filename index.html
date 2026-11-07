@@ -1189,7 +1189,16 @@
                             <option value="702">Opname Minus (- / Defisit)</option>
                         </select>
                     </div>
-                    <div style="display: flex; gap: 4px;">
+                    <div class="sap-field">
+                        <label>Tanggal Dari</label>
+                        <input type="date" id="mb51-date-from" onchange="mutasiCurrentPage=1; renderMutasiTable();">
+                    </div>
+                    <div class="sap-field">
+                        <label>Tanggal Sampai</label>
+                        <input type="date" id="mb51-date-to" onchange="mutasiCurrentPage=1; renderMutasiTable();">
+                    </div>
+                    <div style="display: flex; gap: 4px; align-items: end; flex-wrap: wrap;">
+                        <button class="sap-btn" type="button" onclick="clearMutasiDateFilter()">↺ Reset Tanggal</button>
                         <button class="sap-btn" onclick="exportCSV('mutasi')">📥 Export CSV Log</button>
                     </div>
                 </div>
@@ -2739,15 +2748,21 @@
     function renderMutasiTable() {
         const search = document.getElementById('mb51-search').value.toLowerCase();
         const mvtFilter = document.getElementById('mb51-mvt-filter').value;
+        const dateFrom = document.getElementById('mb51-date-from')?.value || '';
+        const dateTo = document.getElementById('mb51-date-to')?.value || '';
         const tbody = document.getElementById('grid-mutasi-body');
         tbody.innerHTML = '';
 
         const indexedMutasi = mutasiLog.map((log, originalIndex) => ({ log, originalIndex }));
 
         const filtered = indexedMutasi.filter(({ log }) => {
+            const logDate = String(log.date || '').slice(0, 10);
+            if (dateFrom && (!logDate || logDate < dateFrom)) return false;
+            if (dateTo && (!logDate || logDate > dateTo)) return false;
             if (mvtFilter === 'OPNAME' && log.mvt !== '701' && log.mvt !== '702') return false;
             if (mvtFilter !== 'ALL' && mvtFilter !== 'OPNAME' && log.mvt !== mvtFilter) return false;
-            if (search && !log.docNum.toLowerCase().includes(search) && !log.code.toLowerCase().includes(search) && !log.desc.toLowerCase().includes(search) && !(log.sloc && log.sloc.toLowerCase().includes(search))) return false;
+            const searchable = [log.docNum, log.code, log.desc, log.sloc].some(value => String(value || '').toLowerCase().includes(search));
+            if (search && !searchable) return false;
             return true;
         });
 
@@ -2802,6 +2817,15 @@
             `;
             tbody.appendChild(tr);
         });
+    }
+
+    function clearMutasiDateFilter() {
+        const dateFrom = document.getElementById('mb51-date-from');
+        const dateTo = document.getElementById('mb51-date-to');
+        if (dateFrom) dateFrom.value = '';
+        if (dateTo) dateTo.value = '';
+        mutasiCurrentPage = 1;
+        renderMutasiTable();
     }
 
     function changeMutasiPage(delta) {
@@ -3080,7 +3104,12 @@
             downloadCSV(csv, 'Report_Hasil_Stok_Opname.csv');
         } else if (type === 'mutasi') {
             csv += "Tanggal;No Dokumen;Jenis;Kode;Deskripsi;Style;SLoc;Partner;Ref;Qty;UoM;Text\n";
-            mutasiLog.forEach(m => {
+            const dateFrom = document.getElementById('mb51-date-from')?.value || '';
+            const dateTo = document.getElementById('mb51-date-to')?.value || '';
+            mutasiLog.filter(m => {
+                const d = String(m.date || '').slice(0, 10);
+                return (!dateFrom || (d && d >= dateFrom)) && (!dateTo || (d && d <= dateTo));
+            }).forEach(m => {
                 csv += `"${m.date}";"${m.docNum}";"${m.mvt}";"${m.code}";"${m.desc}";"${m.style}";"${m.sloc}";"${m.partner}";"${m.ref}";${m.qty};"${m.uom}";"${m.text}"\n`;
             });
             downloadCSV(csv, 'Mutasi_MB51.csv');
