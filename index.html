@@ -459,7 +459,7 @@
                 margin: 0; 
                 padding: 10px; 
             }
-            .no-print, .sap-titlebar, .sap-menubar, .sap-toolbar, .sap-tabs, .sap-statusbar, .sap-window {
+            .no-print, #offline-sync-indicator, .sap-titlebar, .sap-menubar, .sap-toolbar, .sap-tabs, .sap-statusbar, .sap-window {
                 display: none !important;
             }
             #print-sheet-container {
@@ -543,10 +543,28 @@
         .zreq-style-link:hover{color:#064f8b}
         @media(max-width:600px){#zreq-style-modal{padding:7px}#zreq-style-modal .zreq-modal-card{padding:11px;max-height:92vh}}
 
-</style>
+
+        #offline-sync-indicator {
+            position: fixed; right: 14px; bottom: 58px; z-index: 9998;
+            max-width: min(92vw, 390px); padding: 9px 13px; border-radius: 10px;
+            background: #243447; color: #fff; font-size: 12px; line-height: 1.4;
+            box-shadow: 0 3px 14px rgba(0,0,0,.22); display: flex; gap: 8px;
+            align-items: center;
+        }
+        #offline-sync-indicator[data-state="pending"] { background: #8a5a00; }
+        #offline-sync-indicator[data-state="error"] { background: #a32626; }
+        #offline-sync-indicator[data-state="success"] { background: #176b3a; }
+        @media (max-width: 600px) {
+            #offline-sync-indicator { left: 10px; right: 10px; bottom: 10px; max-width: none; }
+            .sap-statusbar { flex-wrap: wrap; }
+            button, .sap-btn { touch-action: manipulation; }
+        }
+
+    </style>
 </head>
 <body>
 
+<div id="offline-sync-indicator" data-state="success" role="status" aria-live="polite">☁️ Sinkronisasi siap</div>
 <div id="firebase-save-toast" role="status" aria-live="polite"></div>
 
 <div class="sap-window">
@@ -1479,24 +1497,38 @@
     };
 
     async function replaceCloudCollection(collectionName, rows, idField) {
+        // Write the complete new state first. Only remove stale documents after every
+        // write batch succeeds, so a quota error cannot empty a collection first.
         const ref = db.collection(collectionName);
         const oldDocs = await ref.get();
-        let batch = db.batch(), count = 0;
-        for (const doc of oldDocs.docs) {
-            batch.delete(doc.ref); count++;
-            if (count >= 400) { await batch.commit(); batch = db.batch(); count = 0; }
-        }
-        if (count) await batch.commit();
-        for (let i = 0; i < rows.length; i += 400) {
-            batch = db.batch();
-            rows.slice(i, i + 400).forEach((row, offset) => {
-                const index = i + offset;
-                const safeRow = JSON.parse(JSON.stringify(row));
-                const docId = String(safeRow[idField] ?? `${index}`).replaceAll('/', '_').slice(0, 120) || String(index);
-                batch.set(ref.doc(`${String(index).padStart(8, '0')}_${docId}`), { ...safeRow, _order: index });
-            });
+        const desiredIds = new Set();
+        const prepared = rows.map((row, index) => {
+            const safeRow = JSON.parse(JSON.stringify(row));
+            const rawId = String(safeRow[idField] ?? `${index}`).replaceAll('/', '_').slice(0, 120) || String(index);
+            const docId = `${String(index).padStart(8, '0')}_${rawId}`;
+            desiredIds.add(docId);
+            return { docId, data: { ...safeRow, _order: index } };
+        });
+
+        for (let i = 0; i < prepared.length; i += 400) {
+            const batch = db.batch();
+            prepared.slice(i, i + 400).forEach(item => batch.set(ref.doc(item.docId), item.data));
             await batch.commit();
         }
+
+        let deleteBatch = db.batch(), deleteCount = 0;
+        for (const doc of oldDocs.docs) {
+            if (!desiredIds.has(doc.id)) {
+                deleteBatch.delete(doc.ref);
+                deleteCount++;
+                if (deleteCount >= 400) {
+                    await deleteBatch.commit();
+                    deleteBatch = db.batch();
+                    deleteCount = 0;
+                }
+            }
+        }
+        if (deleteCount) await deleteBatch.commit();
     }
 
     async function readCloudCollection(collectionName) {
@@ -1515,32 +1547,234 @@
         firebaseToastTimer = setTimeout(() => { toast.style.display = 'none'; }, 4500);
     }
 
+    const OFFLINE_DB_NAME = 'inventoryGudangOfflineDB';
+    const OFFLINE_STORE_NAME = 'pendingSnapshots';
+    const OFFLINE_PENDING_KEY = 'sap_offline_pending_v1';
+    let offlineDbPromise = null;
+    let syncInProgress = false;
+    let reconnectInProgress = false;
+
+    function getInventorySnapshot() {
+        return {
+            materials: Array.isArray(materials) ? materials : [],
+            mutasi: Array.isArray(mutasiLog) ? mutasiLog : [],
+            purchaseOrders: Array.isArray(purchaseOrders) ? purchaseOrders : [],
+            opnameHistory: Array.isArray(opnameHistory) ? opnameHistory : [],
+            kebutuhanMaterialStyle: Array.isArray(kebutuhanMaterialStyle) ? kebutuhanMaterialStyle : []
+        };
+    }
+
+    function saveSnapshotToLegacyStorage(snapshot) {
+        localStorage.setItem('sap_materials', JSON.stringify(snapshot.materials));
+        localStorage.setItem('sap_mutasi', JSON.stringify(snapshot.mutasi));
+        localStorage.setItem('sap_purchase_orders', JSON.stringify(snapshot.purchaseOrders));
+        localStorage.setItem('sap_opname_history', JSON.stringify(snapshot.opnameHistory));
+        localStorage.setItem('sap_kebutuhan_material_style', JSON.stringify(snapshot.kebutuhanMaterialStyle));
+    }
+
+    function openOfflineDB() {
+        if (!('indexedDB' in window)) return Promise.resolve(null);
+        if (!offlineDbPromise) {
+            offlineDbPromise = new Promise(resolve => {
+                try {
+                    const request = indexedDB.open(OFFLINE_DB_NAME, 1);
+                    request.onupgradeneeded = () => {
+                        const dbHandle = request.result;
+                        if (!dbHandle.objectStoreNames.contains(OFFLINE_STORE_NAME)) {
+                            dbHandle.createObjectStore(OFFLINE_STORE_NAME, { keyPath: 'id' });
+                        }
+                    };
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => resolve(null);
+                    request.onblocked = () => resolve(null);
+                } catch (e) { resolve(null); }
+            });
+        }
+        return offlineDbPromise;
+    }
+
+    async function storePendingSnapshot(snapshot) {
+        const record = { id: 'pending', savedAt: Date.now(), data: snapshot };
+        try {
+            const dbHandle = await openOfflineDB();
+            if (dbHandle) {
+                await new Promise((resolve, reject) => {
+                    const tx = dbHandle.transaction(OFFLINE_STORE_NAME, 'readwrite');
+                    tx.objectStore(OFFLINE_STORE_NAME).put(record);
+                    tx.oncomplete = resolve;
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error);
+                });
+                // Keep a small compatibility marker; full snapshot is in IndexedDB.
+                localStorage.setItem(OFFLINE_PENDING_KEY, JSON.stringify({ savedAt: record.savedAt }));
+            } else {
+                localStorage.setItem(OFFLINE_PENDING_KEY, JSON.stringify(record));
+            }
+            return record;
+        } catch (err) {
+            console.warn('IndexedDB offline save fallback:', err);
+            localStorage.setItem(OFFLINE_PENDING_KEY, JSON.stringify(record));
+            return record;
+        }
+    }
+
+    async function getPendingSnapshot() {
+        try {
+            const dbHandle = await openOfflineDB();
+            if (dbHandle) {
+                const record = await new Promise((resolve, reject) => {
+                    const tx = dbHandle.transaction(OFFLINE_STORE_NAME, 'readonly');
+                    const req = tx.objectStore(OFFLINE_STORE_NAME).get('pending');
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => reject(req.error);
+                });
+                if (record && record.data) return record;
+            }
+        } catch (err) { console.warn('Could not read IndexedDB pending data:', err); }
+        try {
+            const raw = localStorage.getItem(OFFLINE_PENDING_KEY);
+            const record = raw ? JSON.parse(raw) : null;
+            return record && record.data ? record : null;
+        } catch (err) { return null; }
+    }
+
+    async function clearPendingSnapshotIfUnchanged(savedAt) {
+        const current = await getPendingSnapshot();
+        if (!current || current.savedAt !== savedAt) return;
+        try {
+            const dbHandle = await openOfflineDB();
+            if (dbHandle) {
+                await new Promise(resolve => {
+                    const tx = dbHandle.transaction(OFFLINE_STORE_NAME, 'readwrite');
+                    tx.objectStore(OFFLINE_STORE_NAME).delete('pending');
+                    tx.oncomplete = resolve;
+                    tx.onerror = resolve;
+                    tx.onabort = resolve;
+                });
+            }
+        } catch (err) { console.warn('Could not clear IndexedDB pending data:', err); }
+        localStorage.removeItem(OFFLINE_PENDING_KEY);
+    }
+
+    function applySnapshot(snapshot) {
+        if (!snapshot) return;
+        materials = Array.isArray(snapshot.materials) ? snapshot.materials : [];
+        mutasiLog = Array.isArray(snapshot.mutasi) ? snapshot.mutasi : [];
+        purchaseOrders = Array.isArray(snapshot.purchaseOrders) ? snapshot.purchaseOrders : [];
+        opnameHistory = Array.isArray(snapshot.opnameHistory) ? snapshot.opnameHistory : [];
+        kebutuhanMaterialStyle = Array.isArray(snapshot.kebutuhanMaterialStyle) ? snapshot.kebutuhanMaterialStyle : [];
+        saveSnapshotToLegacyStorage(snapshot);
+    }
+
+    function setOfflineSyncStatus(message, state = 'success') {
+        const el = document.getElementById('offline-sync-indicator');
+        if (el) {
+            el.textContent = message;
+            el.dataset.state = state;
+        }
+    }
+
+    async function syncSnapshotToCloud(record) {
+        if (!cloudReady || !record || !record.data) return false;
+        await replaceCloudCollection(CLOUD_COLLECTIONS.materials, record.data.materials, 'code');
+        await replaceCloudCollection(CLOUD_COLLECTIONS.mutasi, record.data.mutasi, 'id');
+        await replaceCloudCollection(CLOUD_COLLECTIONS.purchaseOrders, record.data.purchaseOrders, 'id');
+        await replaceCloudCollection(CLOUD_COLLECTIONS.opnameHistory, record.data.opnameHistory, 'id');
+        await replaceCloudCollection(CLOUD_COLLECTIONS.kebutuhanMaterialStyle, record.data.kebutuhanMaterialStyle, 'id');
+        await clearPendingSnapshotIfUnchanged(record.savedAt);
+        showStatus('Data berhasil tersimpan dan tersinkron ke Firebase', 'S');
+        showFirebaseToast('✅ Berhasil! Data sudah tersimpan ke Firebase.');
+        setOfflineSyncStatus('☁️ Semua data sudah tersinkron ke Firebase', 'success');
+        return true;
+    }
+
     async function saveAllToCloud() {
-        if (!cloudReady) {
-            showFirebaseToast('Firebase belum siap. Data belum dikonfirmasi tersimpan ke cloud.', true);
+        const snapshot = getInventorySnapshot();
+        saveSnapshotToLegacyStorage(snapshot);
+        let record;
+        try {
+            record = await storePendingSnapshot(snapshot);
+        } catch (storageError) {
+            console.error('Local offline storage error:', storageError);
+            showFirebaseToast('Penyimpanan lokal gagal. Periksa ruang penyimpanan perangkat.', true);
+            setOfflineSyncStatus('⚠️ Penyimpanan lokal bermasalah — ekspor/cadangkan data', 'error');
             return false;
         }
-        cloudSaveQueue = cloudSaveQueue.then(async () => {
-            await replaceCloudCollection(CLOUD_COLLECTIONS.materials, materials, 'code');
-            await replaceCloudCollection(CLOUD_COLLECTIONS.mutasi, mutasiLog, 'id');
-            await replaceCloudCollection(CLOUD_COLLECTIONS.purchaseOrders, purchaseOrders, 'id');
-            await replaceCloudCollection(CLOUD_COLLECTIONS.opnameHistory, opnameHistory, 'id');
-            await replaceCloudCollection(CLOUD_COLLECTIONS.kebutuhanMaterialStyle, kebutuhanMaterialStyle, 'id');
-            localStorage.setItem('sap_kebutuhan_material_style', JSON.stringify(kebutuhanMaterialStyle));
-            showStatus('Data berhasil tersimpan dan tersinkron ke Firebase', 'S');
-            showFirebaseToast('✅ Berhasil! Data sudah tersimpan ke Firebase.');
-            return true;
-        }).catch(err => {
-            console.error('Firebase save error:', err);
-            const message = err.message || err.code || 'Periksa Rules/koneksi Firebase';
-            showStatus('Gagal menyimpan ke Firebase: ' + message, 'E');
-            showFirebaseToast('❌ Gagal menyimpan ke Firebase: ' + message, true);
+
+        if (!cloudReady || !navigator.onLine) {
+            setOfflineSyncStatus('📴 Data aman di perangkat — menunggu koneksi/Firebase', 'pending');
+            showStatus('Data tersimpan lokal. Menunggu sinkronisasi Firebase.', 'W');
             return false;
+        }
+
+        cloudSaveQueue = cloudSaveQueue.then(async () => {
+            if (syncInProgress) return false;
+            syncInProgress = true;
+            setOfflineSyncStatus('🔄 Mengirim data lokal ke Firebase…', 'pending');
+            try {
+                return await syncSnapshotToCloud(record);
+            } catch (err) {
+                console.error('Firebase sync error:', err);
+                const message = err.message || err.code || 'Periksa koneksi, kuota, dan Firestore Rules';
+                showStatus('Data tetap tersimpan lokal. Sinkronisasi tertunda: ' + message, 'W');
+                showFirebaseToast('⚠️ Data aman di perangkat; sync tertunda: ' + message, true);
+                setOfflineSyncStatus('⏳ Sinkronisasi tertunda — data tetap aman di perangkat', 'error');
+                return false;
+            } finally {
+                syncInProgress = false;
+            }
         });
         return cloudSaveQueue;
     }
 
+    async function retryPendingSync() {
+        if (reconnectInProgress || !navigator.onLine) return;
+        reconnectInProgress = true;
+        try {
+            if (!cloudReady) {
+                await auth.signInAnonymously();
+                const pending = await getPendingSnapshot();
+                if (pending) {
+                    applySnapshot(pending.data);
+                    cloudReady = true;
+                } else {
+                    await loadCloudOrMigrateLocal();
+                }
+            }
+            const pending = await getPendingSnapshot();
+            if (cloudReady && pending) {
+                cloudSaveQueue = cloudSaveQueue.then(() => syncSnapshotToCloud(pending)).catch(err => {
+                    console.warn('Automatic sync retry failed:', err);
+                    setOfflineSyncStatus('⏳ Menunggu Firebase siap kembali', 'error');
+                    return false;
+                });
+                await cloudSaveQueue;
+            } else if (cloudReady) {
+                setOfflineSyncStatus('☁️ Terhubung — tidak ada data tertunda', 'success');
+            }
+        } catch (err) {
+            console.warn('Firebase reconnect attempt failed:', err);
+            setOfflineSyncStatus('📴 Offline / Firebase belum tersedia — data lokal tetap aman', 'pending');
+        } finally {
+            reconnectInProgress = false;
+        }
+    }
+
+    window.addEventListener('online', retryPendingSync);
+    window.addEventListener('focus', retryPendingSync);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) retryPendingSync();
+    });
+    setInterval(retryPendingSync, 60000);
+
     async function loadCloudOrMigrateLocal() {
+        const pendingLocal = await getPendingSnapshot();
+        if (pendingLocal && pendingLocal.data) {
+            applySnapshot(pendingLocal.data);
+            cloudReady = true;
+            setOfflineSyncStatus('⏳ Ada data lokal yang menunggu sinkronisasi ke Firebase', 'pending');
+            return;
+        }
         const metaRef = db.collection('inventoryAppMeta').doc('migration_v1');
         const meta = await metaRef.get();
         if (meta.exists && meta.data().completed === true) {
@@ -1584,9 +1818,11 @@
             await auth.signInAnonymously();
             await loadCloudOrMigrateLocal();
             showStatus('Terhubung ke Firebase: inventory-gudang-16dfe', 'S');
+            retryPendingSync();
         } catch (err) {
             console.error('Firebase init/load error:', err);
-            showStatus('Firebase belum terhubung. Periksa Anonymous Auth dan Firestore Rules.', 'E');
+            showStatus('Firebase belum terhubung. Data transaksi tetap disimpan lokal dan akan dicoba sinkron otomatis.', 'W');
+            setOfflineSyncStatus('📴 Firebase belum tersedia — data tetap disimpan di perangkat', 'pending');
         }
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('gr-date').value = today;
@@ -1612,8 +1848,7 @@
     });
 
     function saveState() {
-        localStorage.setItem('sap_materials', JSON.stringify(materials));
-        localStorage.setItem('sap_mutasi', JSON.stringify(mutasiLog));
+        saveSnapshotToLegacyStorage(getInventorySnapshot());
         updateGlobalDatalist();
         if (document.getElementById('dashboard-buyer-chart')) renderDashboard();
         saveAllToCloud();
@@ -2652,7 +2887,7 @@
         });
     }
 
-    function savePOState() { localStorage.setItem('sap_purchase_orders', JSON.stringify(purchaseOrders)); saveAllToCloud(); }
+    function savePOState() { saveSnapshotToLegacyStorage(getInventorySnapshot()); saveAllToCloud(); }
 
     function addPORow(item = {}) {
         const tbody = document.getElementById('po-item-rows');
