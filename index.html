@@ -653,7 +653,324 @@
             }
         }
 
-    </style>
+    
+
+/* =========================================================
+   RESPONSIVE UNIVERSAL PATCH
+   Desktop / Laptop / Tablet / Mobile
+   Tidak mengubah fungsi JavaScript maupun struktur modul.
+   ========================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.sap-window {
+    width: 100%;
+    min-width: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+}
+
+.sap-titlebar,
+.sap-menubar,
+.sap-toolbar,
+.sap-tabs,
+.sap-workarea,
+.sap-statusbar { min-width: 0; }
+
+.sap-titlebar {
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.sap-titlebar > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.sap-toolbar {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.sap-tabs {
+    max-width: 100%;
+    scrollbar-width: thin;
+}
+
+.sap-workarea {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sap-workarea > [id^="view-"],
+.sap-panel,
+.dash-layout,
+.dash-panel { min-width: 0; max-width: 100%; }
+
+.sap-form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+}
+
+.sap-field { min-width: 0; }
+.sap-field label { max-width: 38%; }
+.sap-field input,
+.sap-field select,
+.sap-field textarea {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.sap-grid-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sap-grid {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sap-grid th,
+.sap-grid td {
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+}
+
+.sap-pagination {
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dash-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr));
+}
+
+.dash-layout {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+}
+
+.dash-panel { overflow: hidden; }
+.dash-table-wrap { max-width: 100%; overflow: auto; }
+.zreq-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
+.zreq-saved,
+.zreq-table-wrap { max-width: 100%; overflow-x: auto; }
+.sap-modal { padding: 10px; }
+.sap-modal-content {
+    width: min(100%, 850px);
+    max-width: 100%;
+    max-height: calc(100dvh - 20px);
+    min-width: 0;
+    overflow: auto;
+}
+
+/* Laptop dan desktop: gunakan ruang layar tanpa membuat konten melebar. */
+@media (min-width: 769px) {
+    body { padding: 6px; }
+    .sap-window {
+        width: 100%;
+        height: calc(100dvh - 12px);
+        max-height: calc(100dvh - 12px);
+    }
+    .sap-workarea { padding: clamp(6px, 1vw, 12px); }
+}
+
+/* Tablet dan ponsel besar. */
+@media (max-width: 768px) {
+    html, body {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden !important;
+    }
+    body { padding: 2px; }
+    .sap-window {
+        width: 100%;
+        height: 100dvh;
+        max-height: 100dvh;
+        border-width: 1px;
+    }
+    .sap-titlebar {
+        align-items: flex-start;
+        padding: 6px;
+    }
+    .sap-titlebar > span { flex: 1 1 180px; }
+    .sap-titlebar #offline-sync-indicator {
+        max-width: 100%;
+        white-space: normal;
+    }
+    .sap-menubar {
+        gap: 4px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+    .sap-toolbar {
+        gap: 5px;
+        padding: 5px;
+        overflow: visible;
+    }
+    .sap-toolbar .sap-btn {
+        min-height: 30px;
+        height: auto;
+        white-space: normal;
+        justify-content: center;
+    }
+    .tcode-box { min-height: 30px; }
+    .tcode-input { min-height: 25px; }
+    .sap-tabs {
+        padding: 3px;
+        gap: 3px;
+    }
+    .sap-tab {
+        padding: 7px 10px;
+        min-height: 32px;
+    }
+    .sap-workarea {
+        padding: 7px;
+        gap: 7px;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+    .sap-panel { padding: 10px 7px 7px; }
+    .sap-form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .sap-field { width: 100%; }
+    .sap-field label {
+        width: 105px;
+        max-width: 40%;
+        text-align: left;
+    }
+    .sap-field input,
+    .sap-field select,
+    .sap-field textarea {
+        flex: 1 1 0;
+        width: 1%;
+        min-width: 0;
+        height: 32px;
+        font-size: 14px;
+    }
+    .sap-btn {
+        min-height: 30px;
+        height: auto;
+        padding: 5px 8px;
+    }
+    .sap-grid-container {
+        max-height: none !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+    }
+    .sap-grid {
+        width: max-content;
+        min-width: 100%;
+        table-layout: auto;
+    }
+    .sap-grid th,
+    .sap-grid td {
+        padding: 6px 7px;
+        white-space: nowrap;
+        overflow-wrap: normal;
+        font-size: 11px;
+    }
+    .sap-grid input,
+    .sap-grid select {
+        min-width: 90px;
+        min-height: 30px;
+        font-size: 13px;
+    }
+    .sap-pagination {
+        justify-content: center;
+    }
+    .sap-pagination > span {
+        flex: 1 1 100%;
+        text-align: center;
+        order: -1;
+    }
+    .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dash-layout { grid-template-columns: minmax(0, 1fr); }
+    .dash-card { min-width: 0; padding: 8px; }
+    .dash-card .dash-value {
+        font-size: clamp(17px, 5vw, 22px);
+        overflow-wrap: anywhere;
+    }
+    .buyer-bar-row {
+        grid-template-columns: minmax(65px, 90px) minmax(30px, 1fr) 55px;
+        gap: 5px;
+    }
+    .sap-statusbar { gap: 5px; }
+    .zreq-grid { grid-template-columns: minmax(0, 1fr); }
+    .zreq-table { min-width: 650px; }
+    #zreq-style-modal .zreq-modal-card {
+        width: 100%;
+        max-height: 94dvh;
+        overflow: auto;
+    }
+}
+
+/* Ponsel kecil: 320–480 px. */
+@media (max-width: 480px) {
+    * { overflow-wrap: break-word; }
+    body { padding: 1px; }
+    .sap-titlebar { font-size: 10px; }
+    .sap-titlebar > span { flex-basis: 145px; }
+    .sap-titlebar #offline-sync-indicator {
+        flex: 1 1 100%;
+        max-width: 100%;
+        font-size: 10px;
+    }
+    .sap-toolbar .sap-btn {
+        flex: 1 1 auto;
+        min-width: 85px;
+    }
+    .sap-workarea { padding: 5px; }
+    .sap-panel { padding: 10px 5px 6px; }
+    .sap-panel-title { max-width: calc(100% - 20px); }
+    .sap-field { gap: 4px; }
+    .sap-field label {
+        width: 88px;
+        max-width: 36%;
+        font-size: 10px;
+    }
+    .sap-field input,
+    .sap-field select,
+    .sap-field textarea { font-size: 13px; }
+    .dash-grid { gap: 5px; }
+    .dash-card { min-height: 65px; padding: 7px; }
+    .dash-card .dash-label { font-size: 10px; }
+    .dash-panel { padding: 7px; }
+    .sap-statusbar {
+        font-size: 10px;
+        padding: 5px;
+    }
+    .sap-modal { padding: 5px; }
+    .sap-modal-content { max-height: 96dvh; }
+}
+
+/* Layar sangat pendek: pastikan area kerja tetap dapat digulir. */
+@media (max-height: 520px) {
+    .sap-workarea { overflow-y: auto !important; }
+    .sap-titlebar { padding-top: 2px; padding-bottom: 2px; }
+    .sap-tabs .sap-tab { padding-top: 4px; padding-bottom: 4px; }
+}
+
+/* Cetak tetap mempertahankan aturan print bawaan aplikasi. */
+@media print {
+    html, body { position: static !important; overflow: visible !important; }
+}
+
+</style>
 </head>
 <body>
 
