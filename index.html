@@ -570,6 +570,89 @@
             button, .sap-btn { touch-action: manipulation; }
         }
 
+
+        /* PENYERAGAMAN UKURAN TABEL: mengikuti tampilan tabel Mutasi (MB51) */
+        .sap-grid-container {
+            width: 100%;
+            max-height: none !important;
+            overflow: auto !important;
+        }
+        .sap-grid {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .sap-grid th,
+        .sap-grid td {
+            padding: 4px;
+            line-height: 1.25;
+            vertical-align: middle;
+        }
+        /* Tabel kebutuhan material tetap responsif, dengan tinggi sel seragam. */
+        .zreq-table th,
+        .zreq-table td {
+            padding: 4px;
+            line-height: 1.25;
+            vertical-align: middle;
+        }
+        @media (max-width: 768px) {
+            .sap-grid-container {
+                max-width: 100%;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        /* PENYAMAAN KHUSUS MASTER MATERIAL, BARANG MASUK, DAN BARANG KELUAR
+           Samakan lebar tabel, perilaku kolom, dan tinggi baris dengan tabel Mutasi. */
+        #view-mm60 .sap-grid-container,
+        #view-migo-gr .sap-grid-container,
+        #view-migo-gi .sap-grid-container {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            max-height: none !important;
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+            box-sizing: border-box;
+        }
+        #view-mm60 .sap-grid,
+        #view-migo-gr .sap-grid,
+        #view-migo-gi .sap-grid {
+            width: 100% !important;
+            min-width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin: 0;
+        }
+        #view-mm60 .sap-grid th,
+        #view-mm60 .sap-grid td,
+        #view-migo-gr .sap-grid th,
+        #view-migo-gr .sap-grid td,
+        #view-migo-gi .sap-grid th,
+        #view-migo-gi .sap-grid td {
+            padding: 4px;
+            line-height: 1.25;
+            vertical-align: middle;
+            box-sizing: border-box;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+        #view-migo-gr .sap-grid input,
+        #view-migo-gr .sap-grid select,
+        #view-migo-gi .sap-grid input,
+        #view-migo-gi .sap-grid select {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        @media (max-width: 768px) {
+            #view-mm60 .sap-grid,
+            #view-migo-gr .sap-grid,
+            #view-migo-gi .sap-grid {
+                min-width: 720px;
+            }
+        }
+
     </style>
 </head>
 <body>
