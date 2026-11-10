@@ -1807,6 +1807,29 @@ html, body {
     </div>
 </div>
 
+<!-- MODAL POPUP: EDIT SLOC -->
+<div id="modal-edit-sloc" class="sap-modal" onclick="if(event.target===this) closeEditSLocModal()">
+    <div class="sap-modal-content" style="max-width:460px;">
+        <div class="sap-titlebar">
+            <span>✏️ Edit / Pindah SLoc</span>
+            <button type="button" class="sap-btn sap-btn-red" onclick="closeEditSLocModal()" style="height:18px;line-height:10px;">X</button>
+        </div>
+        <form onsubmit="saveEditSLoc(event)" style="padding:14px;">
+            <input type="hidden" id="edit-sloc-code">
+            <input type="hidden" id="edit-sloc-old">
+            <div class="sap-field" style="margin-bottom:10px;"><label>Material</label><div id="edit-sloc-material" style="font-weight:bold;padding:7px;background:#f2f2f2;border:1px solid #bbb;"></div></div>
+            <div class="sap-field" style="margin-bottom:10px;"><label>SLoc Asal</label><input id="edit-sloc-old-display" type="text" readonly style="background:#eee;"></div>
+            <div class="sap-field" style="margin-bottom:10px;"><label>Saldo pada SLoc</label><div id="edit-sloc-balance" style="font-weight:bold;color:#1769aa;padding:7px;"></div></div>
+            <div class="sap-field"><label>SLoc Baru / Rak Tujuan *</label><input id="edit-sloc-new" type="text" placeholder="Masukkan kode SLoc baru" required autocomplete="off"></div>
+            <div style="font-size:12px;color:#666;margin-top:8px;">Seluruh saldo akan dipindahkan ke SLoc baru. Total stok material tidak berubah.</div>
+            <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="sap-btn" onclick="closeEditSLocModal()">Batal</button>
+                <button type="submit" class="sap-btn sap-btn-green">💾 Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- MODAL POPUP: KARTU STOK LEDGER -->
 <div id="modal-ledger" class="sap-modal">
     <div class="sap-modal-content">
@@ -2928,8 +2951,18 @@ html, body {
             if (!log.sloc || log.sloc === '-') return;
             const key = `${log.code}__${log.sloc.toUpperCase()}`;
             if (map[key] === undefined) map[key] = 0;
-            if (log.mvt === '101' || log.mvt === '701') map[key] += parseFloat(log.qty);
-            else if (log.mvt === '201' || log.mvt === '702') map[key] -= parseFloat(log.qty);
+            const qty = Number(log.qty) || 0;
+            if (log.mvt === '101' || log.mvt === '701') map[key] += qty;
+            else if (log.mvt === '201' || log.mvt === '702') map[key] -= qty;
+            else if (log.mvt === '311') {
+                // Relokasi SLoc: kurangi saldo rak asal dan tambahkan ke rak tujuan.
+                map[key] -= qty;
+                const targetKey = `${log.code}__${String(log.slocTo || '').toUpperCase()}`;
+                if (log.slocTo) {
+                    if (map[targetKey] === undefined) map[targetKey] = 0;
+                    map[targetKey] += qty;
+                }
+            }
         });
         return map;
     }
@@ -2995,8 +3028,10 @@ html, body {
             let rakDetails = [];
             Object.keys(stockBySLoc).forEach(key => {
                 const [mCode, slocName] = key.split('__');
-                if (mCode === mat.code && stockBySLoc[key] !== 0) {
-                    rakDetails.push(`<b>${slocName}</b>: ${stockBySLoc[key]} ${mat.uom}`);
+                if (mCode === mat.code && stockBySLoc[key] > 0) {
+                    const codeArg = encodeURIComponent(mat.code);
+                    const slocArg = encodeURIComponent(slocName);
+                    rakDetails.push(`<div role="button" title="Klik untuk edit SLoc" onclick="editStockSLoc('${codeArg}','${slocArg}')" style="display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;margin:2px 4px 2px 0;padding:4px 8px;border:1px solid #9bb8d3;border-radius:4px;background:#f4f8fc;cursor:pointer;"><span><b>${slocName}</b>: ${stockBySLoc[key].toLocaleString('id-ID')} ${mat.uom}</span><span style="color:#1769aa;font-size:11px;">✏️</span></div>`);
                 }
             });
 
@@ -3025,6 +3060,62 @@ html, body {
         }
 
         if (document.getElementById('dashboard-buyer-chart')) renderDashboard();
+    }
+
+    // Klik item SLoc pada MMBE untuk membuka popup pemindahan lokasi.
+    function editStockSLoc(encodedCode, encodedOldSLoc) {
+        const code = decodeURIComponent(encodedCode || '');
+        const oldSLoc = decodeURIComponent(encodedOldSLoc || '').trim().toUpperCase();
+        const mat = materials.find(m => m.code === code);
+        if (!mat || !oldSLoc) return;
+        const currentMap = calculateCurrentStockMapBySLoc();
+        const availableQty = Number(currentMap[`${code}__${oldSLoc}`] || 0);
+        if (availableQty <= 0) {
+            alert('Saldo pada SLoc tersebut sudah kosong.');
+            renderStockTable();
+            return;
+        }
+        document.getElementById('edit-sloc-code').value = code;
+        document.getElementById('edit-sloc-old').value = oldSLoc;
+        document.getElementById('edit-sloc-old-display').value = oldSLoc;
+        document.getElementById('edit-sloc-new').value = '';
+        document.getElementById('edit-sloc-material').textContent = `${code} - ${mat.desc}`;
+        document.getElementById('edit-sloc-balance').textContent = `${availableQty.toLocaleString('id-ID')} ${mat.uom}`;
+        document.getElementById('modal-edit-sloc').style.display = 'flex';
+        setTimeout(() => document.getElementById('edit-sloc-new').focus(), 50);
+    }
+
+    function closeEditSLocModal() {
+        document.getElementById('modal-edit-sloc').style.display = 'none';
+    }
+
+    function saveEditSLoc(event) {
+        if (event) event.preventDefault();
+        const code = document.getElementById('edit-sloc-code').value;
+        const oldSLoc = document.getElementById('edit-sloc-old').value;
+        const cleanNewSLoc = document.getElementById('edit-sloc-new').value.trim().toUpperCase();
+        const mat = materials.find(m => m.code === code);
+        if (!mat || !cleanNewSLoc) { alert('SLoc baru wajib diisi.'); return; }
+        if (cleanNewSLoc === oldSLoc) { alert('SLoc baru sama dengan SLoc lama. Tidak ada perubahan.'); return; }
+        const currentMap = calculateCurrentStockMapBySLoc();
+        const availableQty = Number(currentMap[`${code}__${oldSLoc}`] || 0);
+        if (availableQty <= 0) { alert('Saldo pada SLoc asal sudah kosong atau berubah.'); closeEditSLocModal(); renderStockTable(); return; }
+        if (!confirm(`Pindahkan seluruh saldo ${availableQty.toLocaleString('id-ID')} ${mat.uom} dari rak ${oldSLoc} ke rak ${cleanNewSLoc}?\n\nTotal stok material tetap sama.`)) return;
+
+        const nextDocNum = 5000000000 + mutasiLog.length + 1;
+        const today = new Date();
+        const date = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+        mutasiLog.unshift({
+            docNum: nextDocNum.toString(), date, mvt: '311', code: mat.code,
+            desc: mat.desc, style: '-', sloc: oldSLoc, slocTo: cleanNewSLoc,
+            partner: 'Relokasi Rak', ref: '-', qty: availableQty, uom: mat.uom,
+            text: `Pemindahan SLoc ${oldSLoc} ke ${cleanNewSLoc}`
+        });
+        closeEditSLocModal();
+        saveState();
+        renderStockTable();
+        showStatus(`Saldo ${mat.code} berhasil dipindahkan dari ${oldSLoc} ke ${cleanNewSLoc}`, 'S');
+        if (document.getElementById('modal-ledger')?.style.display === 'flex' && currentLedgerCode === mat.code) openLedgerModal(mat.code);
     }
 
     function changeStockPage(delta) {
@@ -3121,7 +3212,7 @@ html, body {
                 <td>${item.date}</td>
                 <td>${item.docNum}</td>
                 <td>${item.style || '-'}</td>
-                <td><strong>${item.sloc || '-'}</strong></td>
+                <td><strong>${item.mvt === '311' ? `${item.sloc || '-'} → ${item.slocTo || '-'}` : (item.sloc || '-')}</strong></td>
                 <td>${item.partner} (${item.ref})</td>
                 <td>${item.text || '-'}</td>
                 <td style="text-align: right; color: green;">${inQty > 0 ? inQty : '-'}</td>
@@ -3146,7 +3237,7 @@ html, body {
             const inQty = (item.mvt === '101' || item.mvt === '701') ? parseFloat(item.qty) : 0;
             const outQty = (item.mvt === '201' || item.mvt === '702') ? parseFloat(item.qty) : 0;
             runningBalance += (inQty - outQty);
-            csv += `"${item.date}";"${item.docNum}";"${item.style || '-'}";"${item.sloc || '-'}";"${item.partner} (${item.ref})";"${item.text || ''}";${inQty};${outQty};${runningBalance}\n`;
+            csv += `"${item.date}";"${item.docNum}";"${item.style || '-'}";"${item.mvt === '311' ? `${item.sloc || '-'} -> ${item.slocTo || '-'}` : (item.sloc || '-')}";"${item.partner} (${item.ref})";"${item.text || ''}";${inQty};${outQty};${runningBalance}\n`;
         });
         downloadCSV(csv, `Kartu_Stok_${currentLedgerCode}.csv`);
     }
@@ -3167,7 +3258,7 @@ html, body {
             if (dateTo && (!logDate || logDate > dateTo)) return false;
             if (mvtFilter === 'OPNAME' && log.mvt !== '701' && log.mvt !== '702') return false;
             if (mvtFilter !== 'ALL' && mvtFilter !== 'OPNAME' && log.mvt !== mvtFilter) return false;
-            const searchable = [log.docNum, log.code, log.desc, log.sloc].some(value => String(value || '').toLowerCase().includes(search));
+            const searchable = [log.docNum, log.code, log.desc, log.sloc, log.slocTo].some(value => String(value || '').toLowerCase().includes(search));
             if (search && !searchable) return false;
             return true;
         });
@@ -3200,6 +3291,7 @@ html, body {
             else if (log.mvt === '201') mvtBadge = '<span class="badge-mvt mvt-gi">Keluar (GI)</span>';
             else if (log.mvt === '701') mvtBadge = '<span class="badge-mvt mvt-opname-plus">Opname (+)</span>';
             else if (log.mvt === '702') mvtBadge = '<span class="badge-mvt mvt-opname-minus">Opname (-)</span>';
+            else if (log.mvt === '311') mvtBadge = '<span class="badge-mvt" style="background:#e8eaf6;color:#283593;border:1px solid #9fa8da;">Pindah SLoc</span>';
             else mvtBadge = `<span class="badge-mvt">${log.mvt}</span>`;
 
             const tr = document.createElement('tr');
@@ -3210,14 +3302,14 @@ html, body {
                 <td>${log.code}</td>
                 <td>${log.desc}</td>
                 <td>${log.style || '-'}</td>
-                <td><strong>${log.sloc || '-'}</strong></td>
+                <td><strong>${log.mvt === '311' ? `${log.sloc || '-'} → ${log.slocTo || '-'}` : (log.sloc || '-')}</strong></td>
                 <td>${log.partner}</td>
                 <td>${log.ref}</td>
                 <td style="text-align: right; font-weight: bold;">${parseFloat(log.qty).toLocaleString('id-ID')}</td>
                 <td>${log.uom}</td>
                 <td>${log.text || '-'}</td>
                 <td style="text-align: center;">
-                    <button class="sap-btn" onclick="openEditMutasiModal(${originalIndex})">✏️ Edit</button>
+                    ${log.mvt === '311' ? '<button class="sap-btn" disabled title="Edit relokasi melalui fitur Edit SLoc pada MMBE">✏️ Edit</button>' : `<button class="sap-btn" onclick="openEditMutasiModal(${originalIndex})">✏️ Edit</button>`}
                     <button class="sap-btn sap-btn-red" onclick="deleteMutasiItem(${originalIndex})">🗑️ Hapus</button>
                 </td>
             `;
