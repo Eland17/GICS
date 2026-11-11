@@ -1813,7 +1813,7 @@ html, body {
 <div id="modal-edit-sloc" class="sap-modal" onclick="if(event.target===this) closeEditSLocModal()">
     <div class="sap-modal-content" style="max-width:460px;">
         <div class="sap-titlebar">
-            <span>✏️ Edit / Pindah SLoc</span>
+            <span>✏️ Pindah SLoc & Qty</span>
             <button type="button" class="sap-btn sap-btn-red" onclick="closeEditSLocModal()" style="height:18px;line-height:10px;">X</button>
         </div>
         <form onsubmit="saveEditSLoc(event)" style="padding:14px;">
@@ -1822,8 +1822,9 @@ html, body {
             <div class="sap-field" style="margin-bottom:10px;"><label>Material</label><div id="edit-sloc-material" style="font-weight:bold;padding:7px;background:#f2f2f2;border:1px solid #bbb;"></div></div>
             <div class="sap-field" style="margin-bottom:10px;"><label>SLoc Asal</label><input id="edit-sloc-old-display" type="text" readonly style="background:#eee;"></div>
             <div class="sap-field" style="margin-bottom:10px;"><label>Saldo pada SLoc</label><div id="edit-sloc-balance" style="font-weight:bold;color:#1769aa;padding:7px;"></div></div>
-            <div class="sap-field"><label>SLoc Baru / Rak Tujuan *</label><input id="edit-sloc-new" type="text" placeholder="Masukkan kode SLoc baru" required autocomplete="off"></div>
-            <div style="font-size:12px;color:#666;margin-top:8px;">Seluruh saldo akan dipindahkan ke SLoc baru. Total stok material tidak berubah.</div>
+            <div class="sap-field" style="margin-bottom:10px;"><label>Qty Dipindahkan *</label><input id="edit-sloc-qty" type="number" step="any" min="0.01" placeholder="Masukkan jumlah qty" required autocomplete="off" style="font-weight:bold;"></div>
+            <div class="sap-field"><label>SLoc Baru / Rak *</label><input id="edit-sloc-new" type="text" placeholder="Masukkan kode SLoc baru" required autocomplete="off"></div>
+            <div style="font-size:12px;color:#666;margin-top:8px;">Sebagian atau seluruh saldo dapat dipindahkan ke SLoc baru. Total stok material tidak berubah.</div>
             <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;">
                 <button type="button" class="sap-btn" onclick="closeEditSLocModal()">Batal</button>
                 <button type="submit" class="sap-btn sap-btn-green">💾 Simpan Perubahan</button>
@@ -3066,59 +3067,74 @@ html, body {
 
     // Klik item SLoc pada MMBE untuk membuka popup pemindahan lokasi.
     function editStockSLoc(encodedCode, encodedOldSLoc) {
-        const code = decodeURIComponent(encodedCode || '');
-        const oldSLoc = decodeURIComponent(encodedOldSLoc || '').trim().toUpperCase();
-        const mat = materials.find(m => m.code === code);
-        if (!mat || !oldSLoc) return;
-        const currentMap = calculateCurrentStockMapBySLoc();
-        const availableQty = Number(currentMap[`${code}__${oldSLoc}`] || 0);
-        if (availableQty <= 0) {
-            alert('Saldo pada SLoc tersebut sudah kosong.');
-            renderStockTable();
-            return;
-        }
-        document.getElementById('edit-sloc-code').value = code;
-        document.getElementById('edit-sloc-old').value = oldSLoc;
-        document.getElementById('edit-sloc-old-display').value = oldSLoc;
-        document.getElementById('edit-sloc-new').value = '';
-        document.getElementById('edit-sloc-material').textContent = `${code} - ${mat.desc}`;
-        document.getElementById('edit-sloc-balance').textContent = `${availableQty.toLocaleString('id-ID')} ${mat.uom}`;
-        document.getElementById('modal-edit-sloc').style.display = 'flex';
-        setTimeout(() => document.getElementById('edit-sloc-new').focus(), 50);
+    const code = decodeURIComponent(encodedCode || '');
+    const oldSLoc = decodeURIComponent(encodedOldSLoc || '').trim().toUpperCase();
+    const mat = materials.find(m => m.code === code);
+    if (!mat || !oldSLoc) return;
+    const currentMap = calculateCurrentStockMapBySLoc();
+    const availableQty = Number(currentMap[`${code}__${oldSLoc}`] || 0);
+    if (availableQty <= 0) {
+        alert('Saldo pada SLoc tersebut sudah kosong.');
+        renderStockTable();
+        return;
     }
+    document.getElementById('edit-sloc-code').value = code;
+    document.getElementById('edit-sloc-old').value = oldSLoc;
+    document.getElementById('edit-sloc-old-display').value = oldSLoc;
+    document.getElementById('edit-sloc-new').value = '';
+    document.getElementById('edit-sloc-qty').value = availableQty; // Default isi dengan seluruh saldo (bisa diubah manual)
+    document.getElementById('edit-sloc-material').textContent = `${code} - ${mat.desc}`;
+    document.getElementById('edit-sloc-balance').textContent = `${availableQty.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${mat.uom}`;
+    document.getElementById('modal-edit-sloc').style.display = 'flex';
+    setTimeout(() => {
+        const qtyInput = document.getElementById('edit-sloc-qty');
+        qtyInput.focus();
+        qtyInput.select();
+    }, 50);
+}
 
     function closeEditSLocModal() {
         document.getElementById('modal-edit-sloc').style.display = 'none';
     }
 
     function saveEditSLoc(event) {
-        if (event) event.preventDefault();
-        const code = document.getElementById('edit-sloc-code').value;
-        const oldSLoc = document.getElementById('edit-sloc-old').value;
-        const cleanNewSLoc = document.getElementById('edit-sloc-new').value.trim().toUpperCase();
-        const mat = materials.find(m => m.code === code);
-        if (!mat || !cleanNewSLoc) { alert('SLoc baru wajib diisi.'); return; }
-        if (cleanNewSLoc === oldSLoc) { alert('SLoc baru sama dengan SLoc lama. Tidak ada perubahan.'); return; }
-        const currentMap = calculateCurrentStockMapBySLoc();
-        const availableQty = Number(currentMap[`${code}__${oldSLoc}`] || 0);
-        if (availableQty <= 0) { alert('Saldo pada SLoc asal sudah kosong atau berubah.'); closeEditSLocModal(); renderStockTable(); return; }
-        if (!confirm(`Pindahkan seluruh saldo ${availableQty.toLocaleString('id-ID')} ${mat.uom} dari rak ${oldSLoc} ke rak ${cleanNewSLoc}?\n\nTotal stok material tetap sama.`)) return;
+    if (event) event.preventDefault();
+    const code = document.getElementById('edit-sloc-code').value;
+    const oldSLoc = document.getElementById('edit-sloc-old').value;
+    const cleanNewSLoc = document.getElementById('edit-sloc-new').value.trim().toUpperCase();
+    const moveQty = parseFloat(document.getElementById('edit-sloc-qty').value) || 0;
+    
+    const mat = materials.find(m => m.code === code);
+    if (!mat || !cleanNewSLoc) { alert('SLoc baru wajib diisi.'); return; }
+    if (cleanNewSLoc === oldSLoc) { alert('SLoc baru sama dengan SLoc lama. Tidak ada perubahan.'); return; }
+    if (moveQty <= 0) { alert('Jumlah Qty yang dipindahkan harus lebih besar dari 0.'); return; }
 
-        const nextDocNum = 5000000000 + mutasiLog.length + 1;
-        const today = new Date();
-        const date = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-        mutasiLog.unshift({
-            docNum: nextDocNum.toString(), date, mvt: '311', code: mat.code,
-            desc: mat.desc, style: '-', sloc: oldSLoc, slocTo: cleanNewSLoc,
-            partner: 'Relokasi Rak', ref: '-', qty: availableQty, uom: mat.uom,
-            text: `Pemindahan SLoc ${oldSLoc} ke ${cleanNewSLoc}`
-        });
-        closeEditSLocModal();
-        saveState();
-        renderStockTable();
-        showStatus(`Saldo ${mat.code} berhasil dipindahkan dari ${oldSLoc} ke ${cleanNewSLoc}`, 'S');
-        if (document.getElementById('modal-ledger')?.style.display === 'flex' && currentLedgerCode === mat.code) openLedgerModal(mat.code);
+    const currentMap = calculateCurrentStockMapBySLoc();
+    const availableQty = Number(currentMap[`${code}__${oldSLoc}`] || 0);
+    if (availableQty <= 0) { alert('Saldo pada SLoc asal sudah kosong atau berubah.'); closeEditSLocModal(); renderStockTable(); return; }
+    
+    if (moveQty > availableQty) {
+        alert(`Qty yang dipindahkan (${moveQty.toLocaleString('id-ID')}) melebihi saldo tersedia di SLoc asal (${availableQty.toLocaleString('id-ID')}).`);
+        return;
     }
+
+    if (!confirm(`Pindahkan saldo sebanyak ${moveQty.toLocaleString('id-ID')} ${mat.uom} dari rak ${oldSLoc} ke rak ${cleanNewSLoc}?\n\nTotal stok material tetap sama.`)) return;
+
+    const nextDocNum = 5000000000 + mutasiLog.length + 1;
+    const today = new Date();
+    const date = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    mutasiLog.unshift({
+        docNum: nextDocNum.toString(), date, mvt: '311', code: mat.code,
+        desc: mat.desc, style: '-', sloc: oldSLoc, slocTo: cleanNewSLoc,
+        partner: 'Relokasi Rak', ref: '-', qty: moveQty, uom: mat.uom,
+        text: `Pemindahan SLoc ${oldSLoc} ke ${cleanNewSLoc} (${moveQty} ${mat.uom})`
+    });
+    closeEditSLocModal();
+    saveState();
+    renderStockTable();
+    showStatus(`Sebanyak ${moveQty.toLocaleString('id-ID')} ${mat.uom} berhasil dipindahkan dari ${oldSLoc} ke ${cleanNewSLoc}`, 'S');
+    if (document.getElementById('modal-ledger')?.style.display === 'flex' && currentLedgerCode === mat.code) openLedgerModal(mat.code);
+}
 
     function changeStockPage(delta) {
         stockCurrentPage += delta;
