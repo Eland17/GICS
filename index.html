@@ -3187,7 +3187,8 @@ html, body {
         document.getElementById('ledger-mat-desc').innerText = mat.desc;
         document.getElementById('ledger-mat-buyer').innerText = mat.buyer;
         document.getElementById('ledger-mat-uom').innerText = mat.uom;
-        document.getElementById('ledger-mat-stock').innerText = `${(totalStockMap[mat.code] || 0).toLocaleString('id-ID')} ${mat.uom}`;
+        const totalStokVal = totalStockMap[mat.code] || 0;
+        document.getElementById('ledger-mat-stock').innerText = `${totalStokVal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${mat.uom}`;
 
         renderLedgerRows(materialCode);
         document.getElementById('modal-ledger').style.display = 'flex';
@@ -3196,53 +3197,59 @@ html, body {
     function closeLedgerModal() { document.getElementById('modal-ledger').style.display = 'none'; }
 
     function renderLedgerRows(materialCode, startDate = null, endDate = null) {
-        const tbody = document.getElementById('ledger-table-body');
-        tbody.innerHTML = '';
-        let items = mutasiLog.filter(m => m.code === materialCode).sort((a, b) => new Date(a.date) - new Date(b.date));
-        let runningBalance = 0;
+    const tbody = document.getElementById('ledger-table-body');
+    tbody.innerHTML = '';
+    let items = mutasiLog.filter(m => m.code === materialCode).sort((a, b) => new Date(a.date) - new Date(b.date));
+    let runningBalance = 0;
 
-        items.forEach(item => {
-            const inQty = (item.mvt === '101' || item.mvt === '701') ? parseFloat(item.qty) : 0;
-            const outQty = (item.mvt === '201' || item.mvt === '702') ? parseFloat(item.qty) : 0;
-            runningBalance += (inQty - outQty);
+    items.forEach(item => {
+        const inQty = (item.mvt === '101' || item.mvt === '701') ? parseFloat(item.qty) : 0;
+        const outQty = (item.mvt === '201' || item.mvt === '702') ? parseFloat(item.qty) : 0;
+        runningBalance += (inQty - outQty);
 
-            if (startDate && new Date(item.date) < new Date(startDate)) return;
-            if (endDate && new Date(item.date) > new Date(endDate)) return;
+        if (startDate && new Date(item.date) < new Date(startDate)) return;
+        if (endDate && new Date(item.date) > new Date(endDate)) return;
 
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${item.date}</td>
-                <td>${item.docNum}</td>
-                <td>${item.style || '-'}</td>
-                <td><strong>${item.mvt === '311' ? `${item.sloc || '-'} → ${item.slocTo || '-'}` : (item.sloc || '-')}</strong></td>
-                <td>${item.partner} (${item.ref})</td>
-                <td>${item.text || '-'}</td>
-                <td style="text-align: right; color: green;">${inQty > 0 ? inQty : '-'}</td>
-                <td style="text-align: right; color: red;">${outQty > 0 ? outQty : '-'}</td>
-                <td style="text-align: right; font-weight: bold;">${runningBalance}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-        if (!tbody.children.length) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">Tidak ada riwayat.</td></tr>`;
-    }
+        // Format angka desimal (opsi 2 angka di belakang koma)
+        const formatDec = (val) => val.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.date}</td>
+            <td>${item.docNum}</td>
+            <td>${item.style || '-'}</td>
+            <td><strong>${item.mvt === '311' ? `${item.sloc || '-'} → ${item.slocTo || '-'}` : (item.sloc || '-')}</strong></td>
+            <td>${item.partner} (${item.ref})</td>
+            <td>${item.text || '-'}</td>
+            <td style="text-align: right; color: green;">${inQty > 0 ? formatDec(inQty) : '-'}</td>
+            <td style="text-align: right; color: red;">${outQty > 0 ? formatDec(outQty) : '-'}</td>
+            <td style="text-align: right; font-weight: bold;">${formatDec(runningBalance)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+    if (!tbody.children.length) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">Tidak ada riwayat.</td></tr>`;
+}
 
     function filterLedgerDate() {
         renderLedgerRows(currentLedgerCode, document.getElementById('ledger-start-date').value, document.getElementById('ledger-end-date').value);
     }
 
-    function exportLedgerCSV() {
-        if (!currentLedgerCode) return;
-        let csv = "\uFEFFTanggal;No Dokumen;Style;SLoc;Partner/Ref;Keterangan;Masuk;Keluar;Saldo\n";
-        let items = mutasiLog.filter(m => m.code === currentLedgerCode).sort((a, b) => new Date(a.date) - new Date(b.date));
-        let runningBalance = 0;
-        items.forEach(item => {
-            const inQty = (item.mvt === '101' || item.mvt === '701') ? parseFloat(item.qty) : 0;
-            const outQty = (item.mvt === '201' || item.mvt === '702') ? parseFloat(item.qty) : 0;
-            runningBalance += (inQty - outQty);
-            csv += `"${item.date}";"${item.docNum}";"${item.style || '-'}";"${item.mvt === '311' ? `${item.sloc || '-'} -> ${item.slocTo || '-'}` : (item.sloc || '-')}";"${item.partner} (${item.ref})";"${item.text || ''}";${inQty};${outQty};${runningBalance}\n`;
-        });
-        downloadCSV(csv, `Kartu_Stok_${currentLedgerCode}.csv`);
-    }
+ function exportLedgerCSV() {
+    if (!currentLedgerCode) return;
+    let csv = "\uFEFFTanggal;No Dokumen;Style;SLoc;Partner/Ref;Keterangan;Masuk;Keluar;Saldo\n";
+    let items = mutasiLog.filter(m => m.code === currentLedgerCode).sort((a, b) => new Date(a.date) - new Date(b.date));
+    let runningBalance = 0;
+    
+    const formatDec = (val) => val.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    items.forEach(item => {
+        const inQty = (item.mvt === '101' || item.mvt === '701') ? parseFloat(item.qty) : 0;
+        const outQty = (item.mvt === '201' || item.mvt === '702') ? parseFloat(item.qty) : 0;
+        runningBalance += (inQty - outQty);
+        csv += `"${item.date}";"${item.docNum}";"${item.style || '-'}";"${item.mvt === '311' ? `${item.sloc || '-'} -> ${item.slocTo || '-'}` : (item.sloc || '-')}";"${item.partner} (${item.ref})";"${item.text || ''}";${inQty > 0 ? formatDec(inQty) : '-'};${outQty > 0 ? formatDec(outQty) : '-'};${formatDec(runningBalance)}\n`;
+    });
+    downloadCSV(csv, `Kartu_Stok_${currentLedgerCode}.csv`);
+}
 
     function renderMutasiTable() {
         const search = document.getElementById('mb51-search').value.toLowerCase();
