@@ -416,49 +416,181 @@
     }
 }
         /* RESPONSIVE MOBILE OPTIMIZATION KHUSUS XIAOMI REDMI NOTE 7 (STOK BARANG MMBE) */
-        @media(max-width: 768px) {
-            body { 
-                padding: 2px; 
-                zoom: 1.0;
-            }
-            .dash-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
-            .dash-layout { grid-template-columns: 1fr; }
-            
-            /* Penyesuaian khusus tampilan mobile untuk Modul Stok Barang (MMBE) */
-            #view-mmbe .sap-form-grid { 
-                grid-template-columns: 1fr; 
-                gap: 6px;
-            }
-            #view-mmbe .sap-field label { 
-                width: 95px; 
-                text-align: left; 
-            }
-            #view-mmbe .sap-field input, #view-mmbe .sap-field select {
-                height: 26px; /* Memperbesar tinggi input agar mudah disentuh di layar Redmi Note 7 */
-            }
-            #view-mmbe .sap-grid-container {
-                overflow-x: auto; /* Memastikan tabel bisa di-scroll kesamping dengan mulus tanpa merusak layar */
-                max-height: 380px;
-            }
-            #view-mmbe .sap-btn { 
-                padding: 4px 8px; 
-                height: 26px; 
-            }
+        @media (max-width: 768px) {
+    html, body {
+        position: fixed !important;
+        width: 100% !important;
+        height: 100% !important;
+        height: 100dvh !important;
+        overflow: hidden !important;
+    }
 
-            .sap-btn { padding: 2px 6px; height: 24px; }
-            .sap-titlebar #offline-sync-indicator { display: flex !important; max-width: 55vw; }
-        }
+    body { 
+        padding: 2px !important; 
+    }
 
-        /* Kunci halaman pada ukuran layar; area isi modul yang bergerak bila konten panjang. */
-        @media (max-height: 700px) {
-            .sap-workarea { padding: 5px; gap: 5px; }
-            .sap-panel { padding: 6px; margin-top: 3px; }
-            .dash-card { min-height: 58px; padding: 7px; }
-            .dash-card .dash-label { margin-bottom: 4px; }
-            .dash-card .dash-value { font-size: 18px; }
-            .dash-panel { padding: 7px; }
-            .buyer-bar-row { margin: 5px 0; }
-        }
+    .sap-window {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Title Bar & Status Sync di Redmi Note 7 */
+    .sap-titlebar {
+        padding: 4px 6px;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .sap-titlebar > span {
+        font-size: 11px;
+        flex: 1 1 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .sap-titlebar #offline-sync-indicator {
+        font-size: 9px;
+        padding: 2px 6px;
+        max-width: 100% !important;
+        flex-shrink: 0;
+    }
+
+    /* Toolbar T-Code & Tombol Akses Cepat */
+    .sap-toolbar {
+        padding: 4px;
+        gap: 4px;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap !important;
+    }
+
+    .tcode-box {
+        flex-shrink: 0;
+    }
+
+    .tcode-input {
+        width: 65px;
+        font-size: 11px;
+    }
+
+    .sap-btn {
+        padding: 4px 8px;
+        height: 28px;
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+
+    /* Tab Navigasi Modul */
+    .sap-tabs {
+        padding: 2px;
+        gap: 2px;
+    }
+
+    .sap-tab {
+        padding: 5px 10px;
+        font-size: 11px;
+        height: 28px;
+        line-height: 18px;
+    }
+
+    /* Area Kerja Utama (Scroll Vertikal Lancar) */
+    .sap-workarea {
+        padding: 6px;
+        gap: 6px;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Form & Grid Input */
+    .sap-form-grid {
+        grid-template-columns: 1fr !important;
+        gap: 6px;
+    }
+
+    .sap-field {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 6px;
+    }
+
+    .sap-field label {
+        width: 90px !important;
+        max-width: 32%;
+        text-align: left !important;
+        font-size: 10px;
+        flex-shrink: 0;
+    }
+
+    .sap-field input, 
+    .sap-field select, 
+    .sap-field textarea {
+        height: 30px !important;
+        font-size: 12px !important;
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    /* Penyesuaian Tabel Data SAP (MMBE, MB51, MM60, dll) */
+    .sap-grid-container {
+        width: 100% !important;
+        max-height: 52dvh !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        border: 1px solid var(--sap-border-mid);
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sap-grid {
+        width: max-content !important;
+        min-width: 100%;
+    }
+
+    .sap-grid th, 
+    .sap-grid td {
+        padding: 5px 6px;
+        font-size: 10.5px;
+        white-space: nowrap;
+    }
+
+    .sap-grid input, 
+    .sap-grid select {
+        height: 26px;
+        font-size: 11px;
+        min-width: 75px;
+    }
+
+    /* Dashboard Fit Mobile */
+    .dash-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px;
+    }
+
+    .dash-card {
+        padding: 6px 8px;
+        min-height: 60px;
+    }
+
+    .dash-card .dash-label {
+        font-size: 10px;
+        margin-bottom: 4px;
+    }
+
+    .dash-card .dash-value {
+        font-size: 18px;
+    }
+
+    /* Modal Popup */
+    .sap-modal-content {
+        width: 96% !important;
+        max-height: 90dvh !important;
+    }
+}
 
         @media print {
             body { 
