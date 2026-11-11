@@ -3199,7 +3199,18 @@ html, body {
     function renderLedgerRows(materialCode, startDate = null, endDate = null) {
     const tbody = document.getElementById('ledger-table-body');
     tbody.innerHTML = '';
-    let items = mutasiLog.filter(m => m.code === materialCode).sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // URUTKAN BERDASARKAN TANGGAL, KEMUDIAN BERDASARKAN NOMOR DOKUMEN SECARA ASCENDING
+    let items = mutasiLog.filter(m => m.code === materialCode).sort((a, b) => {
+        const dateA = new Date(a.date || '1970-01-01');
+        const dateB = new Date(b.date || '1970-01-01');
+        if (dateA - dateB !== 0) {
+            return dateA - dateB; // Urutkan tanggal dari yang terlama ke terbaru
+        }
+        // Jika tanggalnya sama, urutkan berdasarkan nomor dokumen (angka/string)
+        return String(a.docNum || '').localeCompare(String(b.docNum || ''), undefined, { numeric: true });
+    });
+    
     let runningBalance = 0;
 
     items.forEach(item => {
@@ -3210,7 +3221,6 @@ html, body {
         if (startDate && new Date(item.date) < new Date(startDate)) return;
         if (endDate && new Date(item.date) > new Date(endDate)) return;
 
-        // Format angka desimal (opsi 2 angka di belakang koma)
         const formatDec = (val) => val.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         const tr = document.createElement('tr');
@@ -3237,9 +3247,18 @@ html, body {
  function exportLedgerCSV() {
     if (!currentLedgerCode) return;
     let csv = "\uFEFFTanggal;No Dokumen;Style;SLoc;Partner/Ref;Keterangan;Masuk;Keluar;Saldo\n";
-    let items = mutasiLog.filter(m => m.code === currentLedgerCode).sort((a, b) => new Date(a.date) - new Date(b.date));
-    let runningBalance = 0;
     
+    // Urutkan berdasarkan tanggal, lalu nomor dokumen
+    let items = mutasiLog.filter(m => m.code === currentLedgerCode).sort((a, b) => {
+        const dateA = new Date(a.date || '1970-01-01');
+        const dateB = new Date(b.date || '1970-01-01');
+        if (dateA - dateB !== 0) {
+            return dateA - dateB;
+        }
+        return String(a.docNum || '').localeCompare(String(b.docNum || ''), undefined, { numeric: true });
+    });
+    
+    let runningBalance = 0;
     const formatDec = (val) => val.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     items.forEach(item => {
