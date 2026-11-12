@@ -3618,7 +3618,35 @@ html, body {
         renderFSNTable();
     }
 
-    function savePOState() { saveSnapshotToLegacyStorage(getInventorySnapshot()); saveAllToCloud(); }
+    // Simpan PO secara terpisah agar kegagalan sinkronisasi koleksi lain
+    // (mis. mutasi/opname) tidak menghentikan penulisan Purchase Order.
+    async function savePOState() {
+        const snapshot = getInventorySnapshot();
+        saveSnapshotToLegacyStorage(snapshot);
+
+        // Saat offline / Firebase belum siap, simpan snapshot ke antrean lokal.
+        if (!cloudReady || !navigator.onLine) {
+            try { await saveAllToCloud(); } catch (e) { console.error('PO local queue error:', e); }
+            return false;
+        }
+
+        try {
+            await replaceCloudCollection(CLOUD_COLLECTIONS.purchaseOrders, snapshot.purchaseOrders || [], 'id');
+            showFirebaseToast('✅ Purchase Order berhasil disimpan ke Firestore.');
+            setOfflineSyncStatus('☁️ Purchase Order tersinkron ke Firestore', 'success');
+            return true;
+        } catch (err) {
+            console.error('Firestore PO sync error:', err);
+            // Pastikan data PO yang sudah tersimpan lokal tetap masuk antrean retry.
+            try { await storePendingSnapshot(snapshot); } catch (storageError) {
+                console.error('PO pending snapshot error:', storageError);
+            }
+            const message = err.message || err.code || 'Periksa koneksi dan Firestore Rules';
+            showFirebaseToast('⚠️ PO tersimpan lokal, tetapi gagal dikirim ke Firestore: ' + message, true);
+            setOfflineSyncStatus('⏳ PO menunggu sinkronisasi Firestore', 'error');
+            return false;
+        }
+    }
 
     function addPORow(item = {}) {
         const tbody = document.getElementById('po-item-rows');
@@ -3673,7 +3701,7 @@ html, body {
         addPORow();
     }
 
-    function savePurchaseOrder() {
+    async function savePurchaseOrder() {
         const poNo = document.getElementById('po-number-preview').value.trim();
         const supplier = document.getElementById('po-supplier').value.trim();
         const date = document.getElementById('po-date').value;
@@ -3694,10 +3722,14 @@ html, body {
         }
 
         purchaseOrders.unshift({ id: `${Date.now()}`, number: poNo, supplier, date, deliveryDate, note, items, status: 'Draft' });
-        savePOState();
+        const firestoreSaved = await savePOState();
         renderPOTable();
         resetPOForm();
-        alert(`PO [${poNo}] Berhasil Disimpan sebagai Draft!`);
+        if (firestoreSaved) {
+            alert(`PO [${poNo}] berhasil disimpan sebagai Draft dan tersinkron ke Firestore.`);
+        } else {
+            alert(`PO [${poNo}] berhasil disimpan di perangkat. Sinkronisasi Firestore tertunda; data akan dicoba kirim kembali saat koneksi tersedia.`);
+        }
     }
 
     function getPOProgress(po) {
