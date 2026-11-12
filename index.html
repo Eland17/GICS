@@ -1445,10 +1445,10 @@ html, body {
             <div class="sap-panel">
                 <div class="sap-panel-title">Report Hasil Stok Opname</div>
                 <div class="sap-form-grid" style="margin-bottom:8px;">
-                    <div class="sap-field"><label>Tanggal Dari</label><input type="date" id="report-opname-start" onchange="renderOpnameReport()"></div>
-                    <div class="sap-field"><label>Tanggal Sampai</label><input type="date" id="report-opname-end" onchange="renderOpnameReport()"></div>
-                    <div class="sap-field"><label>Kode Rak</label><input type="text" id="report-opname-sloc" oninput="renderOpnameReport()" placeholder="Semua rak"></div>
-                    <div class="sap-field"><label>Pencarian</label><input type="text" id="report-opname-search" oninput="renderOpnameReport()" placeholder="Kode / deskripsi / buyer / petugas"></div>
+                    <div class="sap-field"><label>Tanggal Dari</label><input type="date" id="report-opname-start" onchange="opnameReportCurrentPage=1;renderOpnameReport()"></div>
+                    <div class="sap-field"><label>Tanggal Sampai</label><input type="date" id="report-opname-end" onchange="opnameReportCurrentPage=1;renderOpnameReport()"></div>
+                    <div class="sap-field"><label>Kode Rak</label><input type="text" id="report-opname-sloc" oninput="opnameReportCurrentPage=1;renderOpnameReport()" placeholder="Semua rak"></div>
+                    <div class="sap-field"><label>Pencarian</label><input type="text" id="report-opname-search" oninput="opnameReportCurrentPage=1;renderOpnameReport()" placeholder="Kode / deskripsi / buyer / petugas"></div>
                 </div>
                 <div class="dash-grid">
                     <div class="dash-card"><div class="dash-label">Total Item Diperiksa</div><div class="dash-value" id="op-r-total">0</div></div>
@@ -1465,7 +1465,12 @@ html, body {
                     <thead><tr><th>Tanggal</th><th>No. Dokumen</th><th>Kode Rak</th><th>Kode Material</th><th>Deskripsi</th><th>Buyer</th><th>Satuan</th><th>Stok Sistem</th><th>Hasil Fisik</th><th>Selisih</th><th>Status</th><th>Petugas</th></tr></thead>
                     <tbody id="report-opname-body"><tr><td colspan="12" style="text-align:center;">Belum ada riwayat opname.</td></tr></tbody>
                 </table></div>
-                <p style="margin-top:6px;color:#555;">Riwayat tersimpan di browser/perangkat ini. Export CSV untuk arsip cadangan.</p>
+                <div class="sap-pagination" id="report-opname-pagination">
+                    <button class="sap-btn" id="report-opname-prev" onclick="changeOpnameReportPage(-1)" disabled>◀ Sebelumnya</button>
+                    <span id="report-opname-page-info">Halaman 1 dari 1 (0 item)</span>
+                    <button class="sap-btn" id="report-opname-next" onclick="changeOpnameReportPage(1)" disabled>Selanjutnya ▶</button>
+                </div>
+                <p style="margin-top:6px;color:#555;">Menampilkan maksimal 20 item per halaman. Gunakan tombol Sebelumnya / Selanjutnya untuk melihat seluruh riwayat opname. Riwayat tersimpan di browser/perangkat ini. Export CSV untuk arsip cadangan.</p>
             </div>
         </div>
 
@@ -1946,6 +1951,8 @@ html, body {
     let stockCurrentPage = 1;
     let mutasiCurrentPage = 1;
     let fsnCurrentPage = 1;
+    let opnameReportCurrentPage = 1;
+    const OPNAME_REPORT_PAGE_SIZE = 20;
     let currentPrintSubTab = 'sloc';
 
     const CLOUD_COLLECTIONS = {
@@ -2687,14 +2694,32 @@ html, body {
         document.getElementById('op-r-match').textContent=rows.filter(r=>r.variance===0).length;
         document.getElementById('op-r-plus').textContent=rows.filter(r=>r.variance>0).length;
         document.getElementById('op-r-minus').textContent=rows.filter(r=>r.variance<0).length;
+        const totalPages=Math.max(1,Math.ceil(rows.length/OPNAME_REPORT_PAGE_SIZE));
+        if(opnameReportCurrentPage>totalPages) opnameReportCurrentPage=totalPages;
+        if(opnameReportCurrentPage<1) opnameReportCurrentPage=1;
+        const startIndex=(opnameReportCurrentPage-1)*OPNAME_REPORT_PAGE_SIZE;
+        const pageRows=rows.slice(startIndex,startIndex+OPNAME_REPORT_PAGE_SIZE);
+        const pageInfo=document.getElementById('report-opname-page-info');
+        const prevBtn=document.getElementById('report-opname-prev');
+        const nextBtn=document.getElementById('report-opname-next');
+        if(pageInfo) pageInfo.textContent=`Halaman ${opnameReportCurrentPage} dari ${totalPages} (${rows.length} item)`;
+        if(prevBtn) prevBtn.disabled=opnameReportCurrentPage<=1;
+        if(nextBtn) nextBtn.disabled=opnameReportCurrentPage>=totalPages;
         if(!rows.length){tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:14px;">Tidak ada data pada filter ini. Simpan hasil melalui menu Stok Opname.</td></tr>';return;}
-        tbody.innerHTML=rows.map(r=>`<tr><td>${r.date||'-'}</td><td>${r.docNum||'-'}</td><td>${r.sloc||'-'}</td>
+        tbody.innerHTML=pageRows.map(r=>`<tr><td>${r.date||'-'}</td><td>${r.docNum||'-'}</td><td>${r.sloc||'-'}</td>
         <td><strong>${r.code}</strong></td><td>${r.desc||'-'}</td><td>${r.buyer||'-'}</td><td>${r.uom||'-'}</td>
         <td style="text-align:right;">${Number(r.bookQty).toLocaleString('id-ID')}</td>
         <td style="text-align:right;">${Number(r.countedQty).toLocaleString('id-ID')}</td>
         <td style="text-align:right;color:${r.variance>0?'green':r.variance<0?'red':'black'};font-weight:bold;">${Number(r.variance).toLocaleString('id-ID')}</td>
         <td>${r.status}</td><td>${r.user||'-'}</td></tr>`).join('');
     }
+    function changeOpnameReportPage(delta) {
+        const rows=getFilteredOpnameHistory();
+        const totalPages=Math.max(1,Math.ceil(rows.length/OPNAME_REPORT_PAGE_SIZE));
+        opnameReportCurrentPage=Math.min(totalPages,Math.max(1,opnameReportCurrentPage+delta));
+        renderOpnameReport();
+    }
+
     function printOpnameReport() {
         const rows=getFilteredOpnameHistory(); if(!rows.length){alert('Tidak ada data untuk dicetak.');return;}
         const body=rows.map(r=>`<tr><td>${r.date}</td><td>${r.sloc}</td><td>${r.code}</td><td>${r.desc}</td><td>${r.buyer}</td><td>${r.uom}</td><td>${r.bookQty}</td><td>${r.countedQty}</td><td>${r.variance}</td><td>${r.status}</td><td>${r.user}</td></tr>`).join('');
