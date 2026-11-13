@@ -972,11 +972,48 @@ html, body {
     html, body { position: static !important; overflow: visible !important; }
 }
 
+
+        /* Popup rincian item Purchase Order */
+        #po-detail-modal{display:none;position:fixed;inset:0;z-index:100600;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:12px}
+        #po-detail-modal.show{display:flex}
+        #po-detail-modal .po-detail-card{background:#fff;border:2px solid #404040;width:min(900px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 32px #0006}
+        #po-detail-modal .po-detail-head{background:#ece9d8;padding:10px 12px;border-bottom:1px solid #888;display:flex;justify-content:space-between;align-items:center;gap:10px}
+        #po-detail-modal .po-detail-head strong{font-size:14px;color:#000080}
+        #po-detail-modal .po-detail-body{padding:12px;overflow:auto}
+        #po-detail-modal .po-detail-meta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;color:#333}
+        #po-detail-modal table{width:100%;border-collapse:collapse;min-width:540px}
+        #po-detail-modal th,#po-detail-modal td{border:1px solid #bbb;padding:7px;text-align:left}
+        #po-detail-modal th{background:#e8eef5}
+        #po-detail-modal td.num{text-align:right}
+        .po-count-link{border:0;background:transparent;color:#075da8;text-decoration:underline;font-weight:bold;cursor:pointer;padding:2px 5px}
+        .po-count-link:hover{color:#c00000}
+        @media(max-width:600px){#po-detail-modal{padding:5px}#po-detail-modal .po-detail-card{max-height:95dvh;width:100%}#po-detail-modal .po-detail-body{padding:8px}}
+
 </style>
 </head>
 <body>
 
 <div id="firebase-save-toast" role="status" aria-live="polite"></div>
+
+<div id="po-detail-modal" role="dialog" aria-modal="true" aria-labelledby="po-detail-title" onclick="if(event.target===this)closePODetail()">
+  <div class="po-detail-card">
+    <div class="po-detail-head">
+      <div><strong id="po-detail-title">Rincian Item Purchase Order</strong><div id="po-detail-subtitle" style="margin-top:4px;color:#555"></div></div>
+      <button type="button" class="sap-btn sap-btn-red" onclick="closePODetail()">✖ Tutup</button>
+    </div>
+    <div class="po-detail-body">
+      <div id="po-detail-meta" class="po-detail-meta"></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th style="width:45px">No</th><th>Kode Material</th><th>Deskripsi Item</th><th>Buyer</th><th style="text-align:right">Qty PO</th><th>UoM</th></tr></thead>
+          <tbody id="po-detail-rows"></tbody>
+          <tfoot><tr><th colspan="4" style="text-align:right">Total Qty</th><th id="po-detail-total" style="text-align:right"></th><th></th></tr></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <div class="sap-window">
     <!-- SAP Title Bar -->
@@ -3685,7 +3722,7 @@ html, body {
     // Format angka PO dengan 2 angka di belakang koma (format Indonesia).
     function formatPONumber(value) {
         const number = Number(value) || 0;
-        return number.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return number.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     }
 
     function updatePOTotals() {
@@ -3757,8 +3794,8 @@ html, body {
     function formatPOTableNumber(value) {
         const number = Number(value) || 0;
         const formatted = Math.abs(number).toLocaleString('id-ID', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
         });
         return number < 0
             ? `<span style="color:#d00000;">(${formatted})</span>`
@@ -3783,7 +3820,7 @@ html, body {
                 <td>${po.date}</td>
                 <td>${po.supplier}</td>
                 <td>${po.deliveryDate || '-'}</td>
-                <td style="text-align:right">${formatPOTableNumber(po.items.length)}</td>
+                <td style="text-align:right"><button type="button" class="po-count-link" title="Klik untuk melihat daftar item dan qty" onclick="showPODetail('${String(po.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">${formatPOTableNumber(po.items.length)}</button></td>
                 <td style="text-align:right">${formatPOTableNumber(p.totVal)}</td>
                 <td style="text-align:right">${formatPOTableNumber(p.totOrd)}</td>
                 <td style="text-align:right">${formatPOTableNumber(p.totRec)}</td>
@@ -3799,6 +3836,53 @@ html, body {
         });
         if (!tbody.children.length) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">Tidak ada PO.</td></tr>`;
     }
+
+
+    function poDetailEscape(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+        }[ch]));
+    }
+
+    function showPODetail(id) {
+        const po = purchaseOrders.find(item => String(item.id) === String(id));
+        if (!po) return;
+        const items = Array.isArray(po.items) ? po.items : [];
+        const tbody = document.getElementById('po-detail-rows');
+        tbody.innerHTML = '';
+        let totalQty = 0;
+        items.forEach((item, index) => {
+            const qty = Number(item.qty) || 0;
+            totalQty += qty;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="text-align:center">${index + 1}</td>
+                <td><strong>${poDetailEscape(item.code || '-')}</strong></td>
+                <td>${poDetailEscape(item.desc || '-')}</td>
+                <td>${poDetailEscape(item.buyer || '-')}</td>
+                <td class="num">${qty.toLocaleString('id-ID',{maximumFractionDigits:2})}</td>
+                <td>${poDetailEscape(item.uom || '-')}</td>`;
+            tbody.appendChild(tr);
+        });
+        if (!items.length) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Belum ada item.</td></tr>';
+        document.getElementById('po-detail-title').textContent = 'Rincian Item PO: ' + (po.number || '-');
+        document.getElementById('po-detail-subtitle').textContent = 'Daftar material dan jumlah yang dipesan';
+        document.getElementById('po-detail-meta').innerHTML =
+            `<span><b>Supplier:</b> ${poDetailEscape(po.supplier || '-')}</span>` +
+            `<span><b>Tanggal PO:</b> ${poDetailEscape(po.date || '-')}</span>` +
+            `<span><b>Jumlah Item:</b> ${items.length}</span>`;
+        document.getElementById('po-detail-total').textContent =
+            totalQty.toLocaleString('id-ID',{maximumFractionDigits:2});
+        document.getElementById('po-detail-modal').classList.add('show');
+    }
+
+    function closePODetail() {
+        document.getElementById('po-detail-modal')?.classList.remove('show');
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') closePODetail();
+    });
 
     function approvePO(id) {
         const po = purchaseOrders.find(p => p.id === id);
