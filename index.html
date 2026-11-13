@@ -1141,7 +1141,7 @@ html, body {
                 </div>
                 <div class="sap-grid-container" style="max-height:300px; overflow:auto;">
                     <table class="sap-grid">
-                        <thead><tr><th>No. PO</th><th>Tgl PO</th><th>Supplier</th><th>Rencana Datang</th><th>Jumlah Item</th><th>Total PO (Rp)</th><th>Qty PO</th><th>Qty Diterima</th><th>Blc</th><th>Status</th><th>Aksi</th></tr></thead>
+                        <thead><tr><th>No. PO</th><th>Tgl PO</th><th>Supplier</th><th>Rencana Datang</th><th style="text-align:right;">Jumlah Item</th><th style="text-align:right;">Total PO (Rp)</th><th style="text-align:right;">Qty PO</th><th style="text-align:right;">Qty Diterima</th><th style="text-align:right;">Blc</th><th>Status</th><th>Aksi</th></tr></thead>
                         <tbody id="po-list-body"></tbody>
                     </table>
                 </div>
@@ -3754,6 +3754,17 @@ html, body {
         return { totOrd, totRec, totVal, status };
     }
 
+    function formatPOTableNumber(value) {
+        const number = Number(value) || 0;
+        const formatted = Math.abs(number).toLocaleString('id-ID', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        return number < 0
+            ? `<span style="color:#d00000;">(${formatted})</span>`
+            : formatted;
+    }
+
     function renderPOTable() {
         const tbody = document.getElementById('po-list-body');
         if (!tbody) return;
@@ -3772,11 +3783,11 @@ html, body {
                 <td>${po.date}</td>
                 <td>${po.supplier}</td>
                 <td>${po.deliveryDate || '-'}</td>
-                <td style="text-align:right">${po.items.length}</td>
-                <td style="text-align:right">${formatPONumber(p.totVal)}</td>
-                <td style="text-align:right">${formatPONumber(p.totOrd)}</td>
-                <td style="text-align:right">${formatPONumber(p.totRec)}</td>
-                <td style="text-align:right">${formatPONumber(p.totRec - p.totOrd)}</td>
+                <td style="text-align:right">${formatPOTableNumber(po.items.length)}</td>
+                <td style="text-align:right">${formatPOTableNumber(p.totVal)}</td>
+                <td style="text-align:right">${formatPOTableNumber(p.totOrd)}</td>
+                <td style="text-align:right">${formatPOTableNumber(p.totRec)}</td>
+                <td style="text-align:right">${formatPOTableNumber(p.totRec - p.totOrd)}</td>
                 <td><strong>${p.status}</strong></td>
                 <td>
                     ${po.status === 'Draft' ? `<button class="sap-btn sap-btn-green" onclick="approvePO('${po.id}')">Approve</button>` : ''}
