@@ -1837,9 +1837,9 @@ html, body {
             <div class="sap-field" style="margin-bottom:10px;"><label>Material</label><div id="edit-sloc-material" style="font-weight:bold;padding:7px;background:#f2f2f2;border:1px solid #bbb;"></div></div>
             <div class="sap-field" style="margin-bottom:10px;"><label>SLoc Asal</label><input id="edit-sloc-old-display" type="text" readonly style="background:#eee;"></div>
             <div class="sap-field" style="margin-bottom:10px;"><label>Saldo pada SLoc</label><div id="edit-sloc-balance" style="font-weight:bold;color:#1769aa;padding:7px;"></div></div>
-            <div class="sap-field" style="margin-bottom:10px;"><label>Qty Dipindahkan *</label><input id="edit-sloc-qty" type="number" step="any" min="0.01" placeholder="Masukkan jumlah qty" required autocomplete="off" style="font-weight:bold;"></div>
+            <div class="sap-field" style="margin-bottom:10px;"><label>Qty Dipindahkan *</label><input id="edit-sloc-qty" type="number" step="any" min="0.01" placeholder="Masukkan qty yang dipindahkan" required autocomplete="off" style="font-weight:bold;"></div>
             <div class="sap-field"><label>SLoc Baru / Rak *</label><input id="edit-sloc-new" type="text" placeholder="Masukkan kode SLoc baru" required autocomplete="off"></div>
-            <div style="font-size:12px;color:#666;margin-top:8px;">Sebagian atau seluruh saldo dapat dipindahkan ke SLoc baru. Total stok material tidak berubah.</div>
+            <div style="font-size:12px;color:#666;margin-top:8px;">Masukkan qty sesuai kebutuhan (boleh sebagian atau seluruh saldo). Maksimal ${availableQty.toLocaleString('id-ID', { maximumFractionDigits: 2 })} ${mat.uom}. Total stok material tidak berubah.</div>
             <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;">
                 <button type="button" class="sap-btn" onclick="closeEditSLocModal()">Batal</button>
                 <button type="submit" class="sap-btn sap-btn-green">💾 Simpan Perubahan</button>
@@ -3195,7 +3195,8 @@ html, body {
     document.getElementById('edit-sloc-old').value = oldSLoc;
     document.getElementById('edit-sloc-old-display').value = oldSLoc;
     document.getElementById('edit-sloc-new').value = '';
-    document.getElementById('edit-sloc-qty').value = availableQty; // Default isi dengan seluruh saldo (bisa diubah manual)
+    document.getElementById('edit-sloc-qty').value = ''; // Kosongkan agar pengguna menentukan qty yang akan dipindahkan
+    document.getElementById('edit-sloc-qty').max = availableQty;
     document.getElementById('edit-sloc-material').textContent = `${code} - ${mat.desc}`;
     document.getElementById('edit-sloc-balance').textContent = `${availableQty.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${mat.uom}`;
     document.getElementById('modal-edit-sloc').style.display = 'flex';
@@ -3215,7 +3216,8 @@ html, body {
     const code = document.getElementById('edit-sloc-code').value;
     const oldSLoc = document.getElementById('edit-sloc-old').value;
     const cleanNewSLoc = document.getElementById('edit-sloc-new').value.trim().toUpperCase();
-    const moveQty = parseFloat(document.getElementById('edit-sloc-qty').value) || 0;
+    const qtyInput = document.getElementById('edit-sloc-qty');
+    const moveQty = parseFloat(qtyInput.value) || 0;
     
     const mat = materials.find(m => m.code === code);
     if (!mat || !cleanNewSLoc) { alert('SLoc baru wajib diisi.'); return; }
@@ -3680,16 +3682,22 @@ html, body {
         updatePOTotals();
     }
 
+    // Format angka PO dengan 2 angka di belakang koma (format Indonesia).
+    function formatPONumber(value) {
+        const number = Number(value) || 0;
+        return number.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     function updatePOTotals() {
         let grand = 0;
         document.querySelectorAll('#po-item-rows tr').forEach(tr => {
             const qty = parseFloat(tr.querySelector('.po-qty').value) || 0;
             const price = parseFloat(tr.querySelector('.po-price').value) || 0;
             const total = qty * price;
-            tr.querySelector('.po-line-total').textContent = total.toLocaleString('id-ID');
+            tr.querySelector('.po-line-total').textContent = formatPONumber(total);
             grand += total;
         });
-        document.getElementById('po-grand-total').textContent = grand.toLocaleString('id-ID');
+        document.getElementById('po-grand-total').textContent = formatPONumber(grand);
     }
 
     function resetPOForm() {
@@ -3765,10 +3773,10 @@ html, body {
                 <td>${po.supplier}</td>
                 <td>${po.deliveryDate || '-'}</td>
                 <td style="text-align:right">${po.items.length}</td>
-                <td style="text-align:right">${p.totVal.toLocaleString('id-ID')}</td>
-                <td style="text-align:right">${p.totOrd}</td>
-                <td style="text-align:right">${p.totRec}</td>
-                <td style="text-align:right">${p.totRec - p.totOrd}</td>
+                <td style="text-align:right">${formatPONumber(p.totVal)}</td>
+                <td style="text-align:right">${formatPONumber(p.totOrd)}</td>
+                <td style="text-align:right">${formatPONumber(p.totRec)}</td>
+                <td style="text-align:right">${formatPONumber(p.totRec - p.totOrd)}</td>
                 <td><strong>${p.status}</strong></td>
                 <td>
                     ${po.status === 'Draft' ? `<button class="sap-btn sap-btn-green" onclick="approvePO('${po.id}')">Approve</button>` : ''}
