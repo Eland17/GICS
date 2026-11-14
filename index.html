@@ -3455,6 +3455,17 @@ html, body {
             return true;
         });
 
+        // Urutkan mutasi berdasarkan tanggal dari yang paling baru ke paling lama.
+        // originalIndex dipertahankan agar tombol Edit/Hapus tetap mengarah ke data yang benar.
+        filtered.sort((a, b) => {
+            const dateA = String(a.log.date || '').slice(0, 10);
+            const dateB = String(b.log.date || '').slice(0, 10);
+            if (!dateA && !dateB) return b.originalIndex - a.originalIndex;
+            if (!dateA) return 1;
+            if (!dateB) return -1;
+            return dateB.localeCompare(dateA) || b.originalIndex - a.originalIndex;
+        });
+
         const totalItems = filtered.length;
         const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
 
