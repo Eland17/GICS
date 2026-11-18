@@ -4032,7 +4032,7 @@ body.access-general .general-hide-action{display:none!important}
    adminMode=mode;
    document.body.classList.toggle('access-general',!mode);
    $('access-gate').style.display='none';$('access-toolbar').style.display='flex';
-   $('access-mode-label').textContent=mode?'MODE ADMIN — AKSES PENUH':'MODE UMUM — INPUT SAJA';
+   $('access-mode-label').textContent=mode?'MODE ADMIN — AKSES PENUH':'MODE UMUM — AKSI PO / BARANG MASUK / BARANG KELUAR';
    $('change-admin-password-btn').style.display=mode?'inline-block':'none';
    refreshAdminControls();applyActionColumnVisibility();
  }
@@ -4093,11 +4093,28 @@ body.access-general .general-hide-action{display:none!important}
    document.querySelectorAll('table').forEach(table=>{
      const rows=[...table.querySelectorAll('tr')];let actionIndexes=[];
      rows.forEach(row=>{[...row.children].forEach((cell,index)=>{if(cell.tagName==='TH' && /^(aksi|action)$/i.test((cell.textContent||'').trim()))actionIndexes.push(index);});});
-     rows.forEach(row=>actionIndexes.forEach(index=>{const cell=row.children[index];if(cell)cell.classList.toggle('general-hide-action',!adminMode);}));
+     const keepGeneralActions = ['view-po','view-migo-gr','view-migo-gi'].some(viewId => {
+       const view=document.getElementById(viewId);
+       return !!view && view.contains(table);
+     });
+     rows.forEach(row=>actionIndexes.forEach(index=>{
+       const cell=row.children[index];
+       if(cell)cell.classList.toggle('general-hide-action',!adminMode && !keepGeneralActions);
+     }));
    });
  }
  function refreshAdminControls(){
-   document.querySelectorAll('button').forEach(b=>{const label=(b.innerText||b.textContent||'').trim();if(adminWords.test(label)){b.dataset.adminOnly='true';b.style.display=adminMode?'':'none';}});
+   document.querySelectorAll('button').forEach(b=>{
+     const label=(b.innerText||b.textContent||'').trim();
+     if(adminWords.test(label)){
+       b.dataset.adminOnly='true';
+       const allowedActionView=['view-po','view-migo-gr','view-migo-gi'].some(viewId=>{
+         const view=document.getElementById(viewId);
+         return !!view && view.contains(b);
+       });
+       b.style.display=(adminMode || allowedActionView)?'':'none';
+     }
+   });
    applyActionColumnVisibility();
  }
  const observer=new MutationObserver(()=>refreshAdminControls());
