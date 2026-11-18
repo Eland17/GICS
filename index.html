@@ -1236,20 +1236,20 @@ html, body {
                     </div>
                 </div>
                 <div class="sap-grid-container">
-                    <table class="sap-grid">
-                        <thead>
-                            <tr>
-                                <th>Kode Material</th>
-                                <th>Deskripsi Material</th>
-                                <th>Buyer</th>
-                                <th>Satuan</th>
-                                <th>Reorder Level</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="grid-master-body"></tbody>
-                    </table>
-                </div>
+    <table class="sap-grid">
+        <thead>
+            <tr>
+                <th style="width: 70px;">Kode Material</th>
+                <th style="width: 380px;">Deskripsi Material</th>
+                <th style="width: 50px;">Buyer</th>
+                <th style="width: 20px;">Satuan</th>
+                <th style="width: 30px; text-align: right;">Reorder Level</th>
+                <th style="width: 110px;">Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="grid-master-body"></tbody>
+    </table>
+</div>
                 <!-- Pagination Controls for Master Table -->
                 <div class="sap-pagination">
                     <button class="sap-btn" id="master-btn-prev" onclick="changeMasterPage(-1)">◀ Sebelumnya</button>
@@ -1294,7 +1294,7 @@ html, body {
                     <table class="sap-grid" id="table-migo-gr">
     			  <thead>
         		      <tr>
-            			<th style="width: 15px;">Item</th>
+            			<th style="width: 25px;">Item</th>
             			<th style="width: 60px;">Material Code & Search</th>
             			<th style="width: 345px;">Deskripsi</th>
             			<th style="width: 85px;">Style</th>
@@ -1346,7 +1346,7 @@ html, body {
                    <table class="sap-grid" id="table-migo-gi">
     			<thead>
         		     <tr>
-            			<th style="width: 15px;">Item</th>
+            			<th style="width: 25px;">Item</th>
             			<th style="width: 60px;">Material Code & Search</th>
             			<th style="width: 345px;">Deskripsi</th>
             			<th style="width: 85px;">Style</th>
@@ -2873,7 +2873,7 @@ html, body {
 
     function addMigoRow(type) {
         const tbody = document.getElementById(`rows-migo-${type}`);
-        const itemCount = (tbody.children.length + 1) * 10;
+        const itemCount = tbody.children.length + 1; // <--- Diubah menjadi tanpa * 10
         const tr = document.createElement('tr');
 
         if (type === 'gr') {
