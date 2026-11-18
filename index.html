@@ -4019,7 +4019,7 @@ body.access-general .general-hide-action{display:none!important}
 <div id="access-toolbar" class="access-toolbar" style="display:none">
  <strong id="access-mode-label">Mode Umum</strong>
  <button id="change-admin-password-btn" type="button" onclick="changeAdminPassword()" style="display:none">Ganti Password Admin</button>
- <span style="color:#526579">Klik menu <b>Menu</b> untuk mengganti mode</span>
+ 
 </div>
 <script>
 (function(){
@@ -4031,8 +4031,8 @@ body.access-general .general-hide-action{display:none!important}
  function showApp(mode){
    adminMode=mode;
    document.body.classList.toggle('access-general',!mode);
-   $('access-gate').style.display='none';$('access-toolbar').style.display='flex';
-   $('access-mode-label').textContent=mode?'MODE ADMIN — AKSES PENUH':'MODE UMUM — AKSI PO / BARANG MASUK / BARANG KELUAR';
+   $('access-gate').style.display='none';$('access-toolbar').style.display=mode?'flex':'none';
+   $('access-mode-label').textContent=mode?'MODE ADMIN — AKSES PENUH':'MODE UMUM';
    $('change-admin-password-btn').style.display=mode?'inline-block':'none';
    refreshAdminControls();applyActionColumnVisibility();
  }
