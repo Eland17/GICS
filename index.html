@@ -1004,11 +1004,46 @@ html, body {
     html, body { position: static !important; overflow: visible !important; }
 }
 
+
+#po-detail-modal{display:none;position:fixed;inset:0;z-index:100600;background:rgba(0,0,0,.58);align-items:center;justify-content:center;padding:12px}
+#po-detail-modal.show{display:flex}
+#po-detail-modal .po-detail-card{background:#d4d0c8;border:2px solid #fff;box-shadow:0 8px 28px #0008;width:min(900px,96vw);max-height:90dvh;display:flex;flex-direction:column}
+#po-detail-modal .po-detail-head{background:linear-gradient(90deg,#000080,#4a82c4);color:#fff;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:bold}
+#po-detail-modal .po-detail-body{padding:12px;overflow:auto}
+#po-detail-modal .po-detail-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:7px;margin-bottom:12px}
+#po-detail-modal .po-detail-meta div{background:#fff;border:1px solid #aaa;padding:7px}
+#po-detail-modal .po-detail-table-wrap{overflow:auto;background:#fff}
+#po-detail-modal table{width:100%;border-collapse:collapse;min-width:600px}
+#po-detail-modal th,#po-detail-modal td{border:1px solid #aaa;padding:7px;text-align:left}
+#po-detail-modal th{background:#e8e8e8}
+#po-detail-modal td.num{text-align:right}
+.po-item-count{color:#075da8;text-decoration:underline;font-weight:bold;cursor:pointer;background:transparent;border:0;padding:2px 4px}
+.po-item-count:hover{color:#b00000;background:#e8eef5}
+@media(max-width:600px){#po-detail-modal{padding:5px}#po-detail-modal .po-detail-card{width:100%;max-height:94dvh}#po-detail-modal .po-detail-body{padding:8px}}
+
 </style>
 </head>
 <body>
 
 <div id="firebase-save-toast" role="status" aria-live="polite"></div>
+
+
+<div id="po-detail-modal" aria-hidden="true" onclick="if(event.target===this) closePODetail()">
+  <div class="po-detail-card" role="dialog" aria-modal="true" aria-labelledby="po-detail-title">
+    <div class="po-detail-head"><span id="po-detail-title">Detail Item Purchase Order</span>
+      <button type="button" class="sap-btn sap-btn-red" onclick="closePODetail()">✖ Tutup</button>
+    </div>
+    <div class="po-detail-body">
+      <div id="po-detail-meta" class="po-detail-meta"></div>
+      <div class="po-detail-table-wrap">
+        <table><thead><tr><th>No</th><th>Kode Material</th><th>Deskripsi</th><th>Buyer</th><th>Qty PO</th><th>Qty Diterima</th><th>Blc</th><th>UoM</th><th>Harga Satuan (Rp)</th><th>Total (Rp)</th><th>Catatan</th></tr></thead>
+        <tbody id="po-detail-items"></tbody></table>
+      </div>
+      <div id="po-detail-qty-summary" style="text-align:right;font-weight:bold;margin-top:10px">Qty PO: 0 | Qty Diterima: 0 | Blc: 0</div>
+      <div style="text-align:right;font-weight:bold;margin-top:6px">Total PO: Rp <span id="po-detail-total">0</span></div>
+    </div>
+  </div>
+</div>
 
 <div class="sap-window">
     <!-- SAP Title Bar -->
@@ -3714,7 +3749,7 @@ html, body {
         updatePOTotals();
     }
 
-    function reindexPORows() { document.querySelectorAll('#po-item-rows tr').forEach((tr, i) => tr.cells[0].textContent = (i + 1) * 10); }
+    function reindexPORows() { document.querySelectorAll('#po-item-rows tr').forEach((tr, i) => tr.cells[0].textContent = i + 1); }
 
     function onPOCodeInput(input) {
         const code = input.value.trim().toUpperCase();
@@ -3809,6 +3844,69 @@ html, body {
             : formatted;
     }
 
+
+    function poDetailEsc(value) {
+        return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function openPODetail(id) {
+        const po = purchaseOrders.find(p => String(p.id) === String(id));
+        if (!po) return;
+        document.getElementById('po-detail-title').textContent = `Detail Item PO - ${po.number}`;
+        document.getElementById('po-detail-meta').innerHTML = `
+            <div><b>No. PO</b><br>${poDetailEsc(po.number)}</div>
+            <div><b>Supplier</b><br>${poDetailEsc(po.supplier)}</div>
+            <div><b>Tanggal PO</b><br>${poDetailEsc(po.date)}</div>
+            <div><b>Rencana Datang</b><br>${poDetailEsc(po.deliveryDate || '-')}</div>`;
+        const receivedByCode = {};
+        (mutasiLog || []).forEach(log => {
+            if (String(log.mvt) === '101' && String(log.ref || '').trim() === String(po.number || '').trim()) {
+                const code = String(log.code || '').trim().toUpperCase();
+                receivedByCode[code] = (receivedByCode[code] || 0) + (Number(log.qty) || 0);
+            }
+        });
+        const fmt = n => n.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+        const fmtBlc = n => n < 0
+            ? `(${Math.abs(n).toLocaleString('id-ID', { maximumFractionDigits: 2 })})`
+            : fmt(n);
+
+        let totalQtyPO = 0, totalQtyReceived = 0, totalValue = 0;
+        const rows = (po.items || []).map((item, index) => {
+            const qty = Number(item.qty) || 0, price = Number(item.price) || 0;
+            const received = receivedByCode[String(item.code || '').trim().toUpperCase()] || 0;
+            const blc = received - qty;
+            totalQtyPO += qty;
+            totalQtyReceived += received;
+            totalValue += qty * price;
+            const blcStyle = blc < 0
+                ? 'color:#d00000;font-weight:bold'
+                : (blc > 0 ? 'color:#087a08;font-weight:bold' : '');
+            return `<tr><td>${index + 1}</td><td>${poDetailEsc(item.code)}</td><td>${poDetailEsc(item.desc)}</td>
+            <td>${poDetailEsc(item.buyer || '-')}</td><td class="num">${fmt(qty)}</td>
+            <td class="num">${fmt(received)}</td><td class="num" style="${blcStyle}">${fmtBlc(blc)}</td>
+            <td>${poDetailEsc(item.uom)}</td><td class="num">${price.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
+            <td class="num">${(qty * price).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td><td>${poDetailEsc(item.note || '-')}</td></tr>`;
+        }).join('');
+
+        const totalBlc = totalQtyReceived - totalQtyPO;
+        const totalBlcStyle = totalBlc < 0
+            ? 'color:#d00000;'
+            : (totalBlc > 0 ? 'color:#087a08;' : '');
+
+        document.getElementById('po-detail-items').innerHTML = rows || '<tr><td colspan="11">Tidak ada item.</td></tr>';
+        const total = (po.items || []).reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.price) || 0), 0);
+        document.getElementById('po-detail-total').textContent = total.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+        document.getElementById('po-detail-qty-summary').innerHTML =
+            `Qty PO: ${fmt(totalQtyPO)} | Qty Diterima: ${fmt(totalQtyReceived)} | Blc: <span style="${totalBlcStyle}">${fmtBlc(totalBlc)}</span>`;
+        const modal = document.getElementById('po-detail-modal');
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+    function closePODetail() {
+        const modal=document.getElementById('po-detail-modal');
+        modal.classList.remove('show'); modal.setAttribute('aria-hidden','true');
+    }
+    document.addEventListener('keydown',event=>{if(event.key==='Escape')closePODetail();});
+
     function renderPOTable() {
         const tbody = document.getElementById('po-list-body');
         if (!tbody) return;
@@ -3827,7 +3925,7 @@ html, body {
                 <td>${po.date}</td>
                 <td>${po.supplier}</td>
                 <td>${po.deliveryDate || '-'}</td>
-                <td style="text-align:right">${formatPOTableNumber(po.items.length)}</td>
+                <td style="text-align:right"><button type="button" class="po-item-count" onclick="openPODetail(${Number(po.id)})" title="Klik untuk melihat detail item">${formatPOTableNumber(po.items.length)}</button></td>
                 <td style="text-align:right">${formatPOTableNumber(p.totVal)}</td>
                 <td style="text-align:right">${formatPOTableNumber(p.totOrd)}</td>
                 <td style="text-align:right">${formatPOTableNumber(p.totRec)}</td>
